@@ -22,3 +22,31 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Firebase
+# Ignore Firebase configuration files with sensitive data
+.firebase/
+.firebaserc
+
+# Firebase emulator data
+firebase-debug.log
+firebase-debug.*.log
+.runtimeconfig.json
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Firebase credentials (if you store them locally)
+serviceAccountKey.json
+credentials.json
+
+# IDE specific Firebase files
+.vscode/launch.json
+.idea/firebase.xml
+
+# OS temporary files
+.tmp
+.temp
+Thumbs.db
