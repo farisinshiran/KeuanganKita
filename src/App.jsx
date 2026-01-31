@@ -1282,7 +1282,7 @@ const InvestmentView = ({ investments, investTypes, wallets, userId, appId, fmt 
              const type = investTypes.find(t => t.id === inv.typeId) || { name: inv.type || 'Lainnya', icon: '❓' };
              
              return (
-               <div key={inv.id} className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow transition-colors duration-300">
+               <div key={inv.id} className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-300">
                  <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
                       <div className="text-2xl bg-gray-50 dark:bg-gray-700 p-2 rounded-lg">{inv.icon || type?.icon || '❓'}</div>
