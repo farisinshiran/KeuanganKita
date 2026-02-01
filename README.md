@@ -53,7 +53,23 @@
 - **Harga Emas Real-Time**: Fetch harga emas terkini dari API eksternal
 - **Custom Investment Types**: Buat tipe investasi sesuai kebutuhan
 
-### 📝 Zakat Calculator
+### � Kalkulator Pengalokasian Gaji
+- **Input Gaji & Rekening**: Masukkan total gaji dan pilih rekening default
+- **Alokasi Fleksibel**: Input alokasi dengan nominal atau persentase (auto-calculate keduanya)
+- **Real-time Summary**: 
+  - Total Dialokasikan
+  - Sisa Gaji
+  - Jumlah Kategori Teralokasi
+- **Visualisasi Pie Chart**: Lihat distribusi alokasi gaji secara visual
+- **Auto-Save State**: Data tersimpan otomatis ketika berpindah menu
+- **Template System**: 
+  - Simpan konfigurasi alokasi sebagai template
+  - Load template untuk bulan berikutnya
+  - Kelola multiple templates- **Apply to Budget**: Aplikasikan alokasi langsung sebagai budget limit kategori dengan satu klik- **Fitur Reset**: Reset semua isian untuk memulai dari awal
+- **Saran Alokasi**: Panduan alokasi ideal (60% primer, 30% sekunder, 10% investasi)
+- **Alert System**: Peringatan jika total alokasi melebihi gaji
+
+### �📝 Zakat Calculator
 - **Perhitungan Zakat**: Hitung zakat berdasarkan jenis investasi (emas, saham, reksadana)
 - **Nisab Emas**: Perhitungan otomatis berdasarkan harga emas terkini
 - **Summary by Type**: Breakdown zakat per jenis investasi
@@ -230,6 +246,7 @@ UI Rendering & User Interaction
 | Wallet Management | ✅ | Multi-wallet support with limits |
 | Subscription Tracker | ✅ | Auto icon mapping untuk 50+ services |
 | Investment Tracking | ✅ | Multiple asset types dengan targets |
+| Salary Allocator | ✅ | Salary allocation calculator with templates |
 | Zakat Calculator | ✅ | Islamic finance calculations |
 | Budget Monitoring | ✅ | Real-time alerts & progress tracking |
 | Multi-Currency | ✅ | 7 major currencies support |

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Plus, Minus, Wallet, TrendingUp, PieChart, Settings, Trash2, Save, X, 
   Menu, ArrowUpRight, ArrowDownRight, Coins, LogOut, Landmark, AlertTriangle, Target, Edit2, LogIn,
-  User, Calendar, CheckCircle, Eye, EyeOff, Moon, Sun, Heart, CreditCard, Banknote, Smartphone, ArrowRightLeft, Repeat, Briefcase, Globe, RefreshCw, Bot, ListFilter
+  User, Calendar, CheckCircle, Eye, EyeOff, Moon, Sun, Heart, CreditCard, Banknote, Smartphone, ArrowRightLeft, Repeat, Briefcase, Globe, RefreshCw, Bot, ListFilter, DollarSign, BarChart3
 } from 'lucide-react';
 import { 
   PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip, Legend,
@@ -1672,6 +1672,501 @@ const CategoryView = ({ categories, userId, appId, fmt }) => {
   );
 };
 
+const SalaryAllocatorView = ({ categories, wallets, userId, appId, fmt }) => {
+  const [salary, setSalary] = useState('');
+  const [allocations, setAllocations] = useState([]);
+  const [selectedWallet, setSelectedWallet] = useState('');
+  const [savedTemplates, setSavedTemplates] = useState([]);
+
+  // Load state from localStorage
+  useEffect(() => {
+    const savedState = localStorage.getItem(`salaryState_${userId}`);
+    if (savedState) {
+      try {
+        const { salary: s, selectedWallet: w, allocations: a } = JSON.parse(savedState);
+        setSalary(s || '');
+        setSelectedWallet(w || '');
+        setAllocations(a || []);
+      } catch (e) {
+        console.error('Error loading state:', e);
+      }
+    }
+
+    // Load saved templates
+    const templates = localStorage.getItem(`salaryTemplates_${userId}`);
+    if (templates) {
+      try {
+        setSavedTemplates(JSON.parse(templates));
+      } catch (e) {
+        console.error('Error loading templates:', e);
+      }
+    }
+  }, [userId]);
+
+  // Auto-save state to localStorage whenever it changes
+  useEffect(() => {
+    if (userId) {
+      const state = { salary, selectedWallet, allocations };
+      localStorage.setItem(`salaryState_${userId}`, JSON.stringify(state));
+    }
+  }, [salary, selectedWallet, allocations, userId]);
+
+  // Save allocations helper
+  const saveAllocations = (data) => {
+    setAllocations(data);
+  };
+
+  const handleAddAllocation = () => {
+    if (!salary || !selectedWallet) {
+      alert('Masukkan gaji dan pilih rekening terlebih dahulu');
+      return;
+    }
+    const newAlloc = {
+      id: Date.now(),
+      category: '',
+      amount: '',
+      percentage: 0,
+      wallet: selectedWallet
+    };
+    saveAllocations([...allocations, newAlloc]);
+  };
+
+  const handleUpdateAllocation = (id, field, value) => {
+    const updated = allocations.map(a => {
+      if (a.id === id) {
+        const newA = { ...a };
+        
+        if (field === 'amount') {
+          newA.amount = value;
+          // Auto calculate percentage if amount changes and salary is set
+          if (salary && value !== '') {
+            newA.percentage = ((parseFloat(value) || 0) / parseFloat(salary)) * 100;
+          } else {
+            newA.percentage = 0;
+          }
+        } else if (field === 'percentage') {
+          newA.percentage = parseFloat(value) || 0;
+          // Auto calculate amount if percentage changes and salary is set
+          if (salary) {
+            newA.amount = ((parseFloat(value) || 0) / 100 * parseFloat(salary)).toString();
+          } else {
+            newA.amount = '';
+          }
+        } else {
+          // For other fields like category, wallet
+          newA[field] = value;
+        }
+        
+        return newA;
+      }
+      return a;
+    });
+    saveAllocations(updated);
+  };
+
+  const handleDeleteAllocation = (id) => {
+    saveAllocations(allocations.filter(a => a.id !== id));
+  };
+
+  const handleReset = () => {
+    if (confirm('Reset semua alokasi? Data akan dihapus.')) {
+      setSalary('');
+      setSelectedWallet('');
+      setAllocations([]);
+    }
+  };
+
+  const handleSaveTemplate = () => {
+    if (!salary || allocations.length === 0) {
+      alert('Masukkan gaji dan minimal 1 alokasi terlebih dahulu');
+      return;
+    }
+    const name = prompt('Nama template (contoh: Gaji Bulanan Januari):');
+    if (!name) return;
+    
+    const template = {
+      id: Date.now(),
+      name,
+      salary,
+      selectedWallet,
+      allocations,
+      createdAt: new Date().toISOString()
+    };
+
+    const updated = [...savedTemplates, template];
+    setSavedTemplates(updated);
+    localStorage.setItem(`salaryTemplates_${userId}`, JSON.stringify(updated));
+    alert(`Template "${name}" berhasil disimpan!`);
+  };
+
+  const handleLoadTemplate = (template) => {
+    if (confirm(`Load template "${template.name}"?`)) {
+      setSalary(template.salary);
+      setSelectedWallet(template.selectedWallet);
+      setAllocations(template.allocations.map(a => ({ ...a, id: Date.now() + Math.random() })));
+    }
+  };
+
+  const handleDeleteTemplate = (id) => {
+    if (confirm('Hapus template ini?')) {
+      const updated = savedTemplates.filter(t => t.id !== id);
+      setSavedTemplates(updated);
+      localStorage.setItem(`salaryTemplates_${userId}`, JSON.stringify(updated));
+    }
+  };
+
+  const handleApplyToBudget = async () => {
+    if (allocations.length === 0) {
+      alert('Tidak ada alokasi untuk diaplikasikan ke budget');
+      return;
+    }
+
+    if (!confirm('Aplikasikan alokasi ini sebagai budget limit untuk kategori terkait?')) {
+      return;
+    }
+
+    try {
+      let successCount = 0;
+      for (const alloc of allocations) {
+        if (alloc.category && alloc.amount) {
+          // Find category in categories.raw
+          const category = categories.raw.find(c => c.name === alloc.category && c.type === 'expense');
+          if (category) {
+            const catRef = doc(db, 'artifacts', appId, 'users', userId, 'categories', category.id);
+            await updateDoc(catRef, {
+              budget: parseFloat(alloc.amount) || 0
+            });
+            successCount++;
+          }
+        }
+      }
+
+      alert(`Budget berhasil diaplikasikan ke ${successCount} kategori!`);
+    } catch (error) {
+      console.error('Error applying budget:', error);
+      alert('Gagal mengaplikasikan budget: ' + error.message);
+    }
+  };
+
+  const totalAllocated = allocations.reduce((sum, a) => sum + (parseFloat(a.amount) || 0), 0);
+  const remaining = (parseFloat(salary) || 0) - totalAllocated;
+  const remainingPercent = salary ? (remaining / parseFloat(salary)) * 100 : 0;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+          <DollarSign size={28} className="text-emerald-600 dark:text-emerald-400"/>
+          Kalkulator Pengalokasian Gaji
+        </h2>
+        <div className="flex gap-2 flex-wrap">
+          <button 
+            onClick={handleApplyToBudget}
+            disabled={allocations.length === 0}
+            className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex gap-2 items-center transition-colors"
+          >
+            <Target size={16}/> Apply ke Budget
+          </button>
+          <button 
+            onClick={handleSaveTemplate} 
+            disabled={!salary || allocations.length === 0}
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex gap-2 items-center transition-colors"
+          >
+            <Save size={16}/> Simpan Template
+          </button>
+          <button 
+            onClick={handleReset}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex gap-2 items-center transition-colors"
+          >
+            <RefreshCw size={16}/> Reset
+          </button>
+        </div>
+      </div>
+
+      {/* Saved Templates */}
+      {savedTemplates.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-colors duration-300">
+          <h3 className="font-bold text-gray-700 dark:text-gray-200 mb-3 flex items-center gap-2">
+            <Briefcase size={18} className="text-purple-500"/>
+            Template Tersimpan
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {savedTemplates.map(template => (
+              <div key={template.id} className="p-3 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border border-purple-200 dark:border-purple-800 hover:shadow-md transition-all">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{template.name}</h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{fmt(template.salary)}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">{template.allocations.length} alokasi</p>
+                  </div>
+                  <button 
+                    onClick={() => handleDeleteTemplate(template.id)}
+                    className="text-gray-300 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 transition-colors"
+                  >
+                    <Trash2 size={14}/>
+                  </button>
+                </div>
+                <button 
+                  onClick={() => handleLoadTemplate(template)}
+                  className="w-full mt-2 bg-purple-600 hover:bg-purple-700 text-white text-xs py-1.5 rounded-lg transition-colors font-medium"
+                >
+                  Load Template
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Salary Input */}
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-colors duration-300">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="font-semibold text-gray-700 dark:text-gray-200">Input Data Gaji</h3>
+          <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+            <CheckCircle size={14}/> Auto-save aktif
+          </span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Total Gaji (Rp)</label>
+            <input 
+              type="number" 
+              value={salary} 
+              onChange={(e) => setSalary(e.target.value)} 
+              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white dark:bg-gray-700 dark:text-white text-lg font-bold"
+              placeholder="Masukkan total gaji"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Rekening Default</label>
+            <select 
+              value={selectedWallet} 
+              onChange={(e) => setSelectedWallet(e.target.value)} 
+              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white dark:bg-gray-700 dark:text-white dark:[&>option]:bg-gray-800"
+            >
+              <option value="">Pilih Rekening...</option>
+              {wallets.map(w => <option key={w.id} value={w.id}>{w.icon} {w.name}</option>)}
+            </select>
+          </div>
+        </div>
+
+        {salary && (
+          <div className="mt-6 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+            <p className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">
+              Total Gaji: <span className="font-bold text-lg">{fmt(salary)}</span>
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Allocations Summary */}
+      {salary && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">TOTAL DIALOKASIKAN</p>
+            <h3 className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{fmt(totalAllocated)}</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{((totalAllocated / parseFloat(salary)) * 100).toFixed(1)}%</p>
+          </div>
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">SISA GAJI</p>
+            <h3 className={`text-2xl font-bold ${remaining >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>
+              {fmt(remaining)}
+            </h3>
+            <p className={`text-xs mt-1 ${remaining >= 0 ? 'text-blue-500 dark:text-blue-400' : 'text-red-500 dark:text-red-400'}`}>
+              {remaining >= 0 ? `${remainingPercent.toFixed(1)}% tersedia` : `Kurang ${fmt(Math.abs(remaining))}`}
+            </p>
+          </div>
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">ALOKASI ITEM</p>
+            <h3 className="text-2xl font-bold text-purple-600 dark:text-purple-400">{allocations.length}</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">kategori teralokasi</p>
+          </div>
+        </div>
+      )}
+
+      {/* Allocations Table */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-colors duration-300">
+        <div className="p-4 border-b dark:border-gray-700">
+          <div className="flex justify-between items-center">
+            <h3 className="font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2">
+              <BarChart3 size={18} className="text-blue-500"/>
+              Daftar Alokasi
+            </h3>
+            <button 
+              onClick={handleAddAllocation} 
+              disabled={!salary || !selectedWallet}
+              className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex gap-2 items-center transition-colors"
+            >
+              <Plus size={16}/> Tambah Alokasi
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            💡 Tip: Input bisa dilakukan dengan nominal atau persentase. Sistem akan otomatis menghitung yang lainnya.
+          </p>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
+              <tr>
+                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">Kategori</th>
+                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">Rekening</th>
+                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">Nominal</th>
+                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">Persentase</th>
+                <th className="p-4 w-20"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              {allocations.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="p-8 text-center text-gray-400 dark:text-gray-500">
+                    Belum ada alokasi
+                  </td>
+                </tr>
+              ) : (
+                allocations.map(alloc => (
+                  <tr key={alloc.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                    <td className="p-4">
+                      <select 
+                        value={alloc.category} 
+                        onChange={(e) => handleUpdateAllocation(alloc.id, 'category', e.target.value)}
+                        className="w-full p-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white text-sm dark:[&>option]:bg-gray-700"
+                      >
+                        <option value="">Pilih Kategori...</option>
+                        {categories.expense.map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="p-4">
+                      <select 
+                        value={alloc.wallet} 
+                        onChange={(e) => handleUpdateAllocation(alloc.id, 'wallet', e.target.value)}
+                        className="w-full p-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white text-sm dark:[&>option]:bg-gray-700"
+                      >
+                        {wallets.map(w => (
+                          <option key={w.id} value={w.id}>{w.icon} {w.name}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="p-4">
+                      <input 
+                        type="number" 
+                        value={alloc.amount || ''} 
+                        onChange={(e) => handleUpdateAllocation(alloc.id, 'amount', e.target.value)}
+                        className="w-full p-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white text-sm font-semibold"
+                        placeholder="0"
+                        min="0"
+                      />
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="number" 
+                          value={((alloc.percentage || 0)).toFixed(1)} 
+                          onChange={(e) => handleUpdateAllocation(alloc.id, 'percentage', e.target.value)}
+                          className="w-20 p-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white text-sm font-semibold"
+                          step="0.1"
+                          min="0"
+                          max="100"
+                        />
+                        <span className="text-gray-500 dark:text-gray-400">%</span>
+                      </div>
+                    </td>
+                    <td className="p-4 text-center">
+                      <button 
+                        onClick={() => handleDeleteAllocation(alloc.id)}
+                        className="text-gray-300 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 transition-colors"
+                      >
+                        <Trash2 size={16}/>
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {allocations.length > 0 && remaining < 0 && (
+          <div className="p-4 bg-red-50 dark:bg-red-900/20 border-t border-red-200 dark:border-red-800 flex gap-3">
+            <AlertTriangle className="text-red-600 dark:text-red-400 shrink-0" size={20}/>
+            <div>
+              <p className="text-sm font-semibold text-red-700 dark:text-red-300">Perhatian: Total alokasi melebihi gaji!</p>
+              <p className="text-xs text-red-600 dark:text-red-300 mt-1">Kurang {fmt(Math.abs(remaining))} untuk seimbangkan alokasi.</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Allocation Breakdown Chart */}
+      {allocations.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Pie Chart */}
+          <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col transition-colors duration-300">
+            <h3 className="font-bold text-gray-700 dark:text-gray-200 mb-4">Distribusi Alokasi</h3>
+            {allocations.filter(a => a.amount).length > 0 ? (
+              <ResponsiveContainer width="100%" height={250}>
+                <RePieChart>
+                  <Pie 
+                    data={allocations.filter(a => a.amount).map(a => ({
+                      name: a.category || 'Tanpa Kategori',
+                      value: parseFloat(a.amount) || 0
+                    }))} 
+                    cx="50%" 
+                    cy="50%" 
+                    innerRadius={60} 
+                    outerRadius={90} 
+                    paddingAngle={2} 
+                    dataKey="value"
+                  >
+                    {allocations.map((_, i) => (
+                      <Cell key={i} fill={['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6366F1'][i % 7]}/>
+                    ))}
+                  </Pie>
+                  <ReTooltip formatter={(v) => fmt(v)} />
+                  <Legend verticalAlign="bottom" />
+                </RePieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-gray-400 dark:text-gray-500">
+                Masukkan nominal alokasi untuk melihat diagram
+              </div>
+            )}
+          </div>
+
+          {/* Tips & Suggestions */}
+          <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-colors duration-300">
+            <h3 className="font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+              <Target size={18} className="text-amber-500"/>
+              Saran Pengalokasian
+            </h3>
+            <div className="space-y-3 text-sm">
+              <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-100 dark:border-amber-800">
+                <p className="font-semibold text-amber-900 dark:text-amber-300">Kebutuhan Primer (60%)</p>
+                <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">{fmt((parseFloat(salary) || 0) * 0.6)}</p>
+              </div>
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
+                <p className="font-semibold text-blue-900 dark:text-blue-300">Kebutuhan Sekunder (30%)</p>
+                <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">{fmt((parseFloat(salary) || 0) * 0.3)}</p>
+              </div>
+              <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800">
+                <p className="font-semibold text-purple-900 dark:text-purple-300">Investasi & Tabungan (10%)</p>
+                <p className="text-xs text-purple-700 dark:text-purple-400 mt-1">{fmt((parseFloat(salary) || 0) * 0.1)}</p>
+              </div>
+            </div>
+            <div className="space-y-2 mt-4 text-xs text-gray-500 dark:text-gray-400">
+              <p>💡 <strong>Panduan:</strong> Alokasikan gaji sesuai prioritas keluarga Anda.</p>
+              <p>🎯 <strong>Apply ke Budget:</strong> Klik tombol "Apply ke Budget" untuk otomatis mengatur limit budget kategori sesuai alokasi Anda.</p>
+              <p>💾 <strong>Simpan Template:</strong> Simpan konfigurasi alokasi untuk digunakan di bulan berikutnya.</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // --- 6. MAIN APP (Defined Last) ---
 export default function App() {
   const [user, setUser] = useState(null);
@@ -1869,6 +2364,7 @@ export default function App() {
             <NavBtn id="subscriptions" active={activeTab} set={setActiveTab} icon={<Repeat size={20}/>} label="Langganan" />
             <NavBtn id="wallets" active={activeTab} set={setActiveTab} icon={<CreditCard size={20}/>} label="Rekening & CC" />
             <NavBtn id="investments" active={activeTab} set={setActiveTab} icon={<TrendingUp size={20}/>} label="Investasi & Goal" />
+            <NavBtn id="salary-allocator" active={activeTab} set={setActiveTab} icon={<DollarSign size={20}/>} label="Alokasi Gaji" />
             <NavBtn id="zakat" active={activeTab} set={setActiveTab} icon={<Heart size={20}/>} label="Kalkulator Zakat" />
             <NavBtn id="categories" active={activeTab} set={setActiveTab} icon={<Settings size={20}/>} label="Kategori" />
           </nav>
@@ -1954,6 +2450,7 @@ export default function App() {
                   <NavBtn id="subscriptions" active={activeTab} set={(id) => { setActiveTab(id); setIsMobileMenuOpen(false); }} icon={<Repeat size={20}/>} label="Langganan" />
                   <NavBtn id="wallets" active={activeTab} set={(id) => { setActiveTab(id); setIsMobileMenuOpen(false); }} icon={<CreditCard size={20}/>} label="Rekening & CC" />
                   <NavBtn id="investments" active={activeTab} set={(id) => { setActiveTab(id); setIsMobileMenuOpen(false); }} icon={<TrendingUp size={20}/>} label="Investasi & Goal" />
+                  <NavBtn id="salary-allocator" active={activeTab} set={(id) => { setActiveTab(id); setIsMobileMenuOpen(false); }} icon={<DollarSign size={20}/>} label="Alokasi Gaji" />
                   <NavBtn id="zakat" active={activeTab} set={(id) => { setActiveTab(id); setIsMobileMenuOpen(false); }} icon={<Heart size={20}/>} label="Kalkulator Zakat" />
                   <NavBtn id="categories" active={activeTab} set={(id) => { setActiveTab(id); setIsMobileMenuOpen(false); }} icon={<Settings size={20}/>} label="Kategori" />
                 </nav>
@@ -1972,6 +2469,7 @@ export default function App() {
         {activeTab === 'subscriptions' && <SubscriptionView subscriptions={subscriptions} wallets={wallets} userId={user.uid} appId={appId} fmt={fmt} />}
         {activeTab === 'wallets' && <WalletView wallets={summary.walletBalances} userId={user.uid} appId={appId} fmt={fmt} privacyMode={privacyMode}/>}
         {activeTab === 'investments' && <InvestmentView investments={investments} investTypes={investTypes} wallets={wallets} userId={user.uid} appId={appId} fmt={fmt} />}
+        {activeTab === 'salary-allocator' && <SalaryAllocatorView categories={categories} wallets={summary.walletBalances} userId={user.uid} appId={appId} fmt={fmt} />}
         {activeTab === 'zakat' && <ZakatView summary={summary} investments={investments} fmt={fmt} />}
         {activeTab === 'categories' && <CategoryView categories={categories} userId={user.uid} appId={appId} fmt={fmt} />}
 
