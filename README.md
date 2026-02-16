@@ -10,6 +10,19 @@
 
 ## 🌟 Fitur Utama
 
+### 🤖 Quick Add - AI Receipt Scanner (NEW!)
+- **Upload & Scan**: Upload screenshot atau foto struk belanja
+- **AI-Powered OCR**: Google Cloud Vision API mendeteksi transaksi otomatis
+- **Multi-Transaction Preview**: Edit & verifikasi beberapa transaksi sekaligus
+- **Smart Categorization**: AI otomatis mengategorikan merchant
+- **Bulk Approval**: Simpan multiple transaksi dalam satu klik
+- **Date Detection**: Deteksi tanggal transaksi otomatis dari struk
+- **Editable Table**: Edit nominal, kategori, akun, tanggal, dan catatan sebelum approve
+- **Cross-Device Sync**: API key tersimpan di cloud, otomatis sync ke semua device
+- **🔒 Privacy First**: Screenshot otomatis dihapus setelah transaksi disimpan - tidak pernah tersimpan di server!
+
+📖 **Setup Guide:** [VISION_API_QUICKSTART.md](./VISION_API_QUICKSTART.md) | 🔒 **Privacy:** [PRIVACY_SECURITY.md](./PRIVACY_SECURITY.md)
+
 ### 📊 Dashboard Analitik
 - **Ringkasan Aset**: Tampilkan total aset bersih, saldo kas, dan total investasi dalam satu pandangan
 - **Tren Arus Kas (6 Bulan)**: Visualisasi tren pemasukan dan pengeluaran dengan grafik line chart interaktif
@@ -54,7 +67,11 @@
 - **Custom Investment Types**: Buat tipe investasi sesuai kebutuhan
 
 ### � Kalkulator Pengalokasian Gaji
-- **Input Gaji & Rekening**: Masukkan total gaji dan pilih rekening default
+- **Multiple Salary Sources**: 
+  - Input gaji dari berbagai sumber (Gaji Utama, Bonus, Sampingan, dll)
+  - Tambah/hapus sumber gaji sesuai kebutuhan
+  - Auto-calculate total gaji dari semua sumber
+- **Input Gaji & Rekening**: Masukkan gaji dan pilih rekening default
 - **Alokasi Fleksibel**: Input alokasi dengan nominal atau persentase (auto-calculate keduanya)
 - **Real-time Summary**: 
   - Total Dialokasikan
@@ -65,7 +82,9 @@
 - **Template System**: 
   - Simpan konfigurasi alokasi sebagai template
   - Load template untuk bulan berikutnya
-  - Kelola multiple templates- **Apply to Budget**: Aplikasikan alokasi langsung sebagai budget limit kategori dengan satu klik- **Fitur Reset**: Reset semua isian untuk memulai dari awal
+  - Kelola multiple templates
+- **Apply to Budget**: Aplikasikan alokasi langsung sebagai budget limit kategori dengan satu klik
+- **Fitur Reset**: Reset semua isian untuk memulai dari awal
 - **Saran Alokasi**: Panduan alokasi ideal (60% primer, 30% sekunder, 10% investasi)
 - **Alert System**: Peringatan jika total alokasi melebihi gaji
 
@@ -114,6 +133,7 @@ Dengan **real-time exchange rate** fetching dari API eksternal.
 - **Styling**: Tailwind CSS dengan dark mode support
 - **Backend/Database**: Firebase + Firestore
 - **Authentication**: Firebase Auth (Google Sign-In)
+- **AI/ML**: Google Cloud Vision API (OCR & Text Detection)
 - **Charts**: Recharts untuk visualisasi data interaktif
 - **Icons**: Lucide React untuk UI icons
 - **Formatting**: Intl API untuk currency dan date formatting
@@ -152,7 +172,19 @@ const firebaseConfig = {
 };
 ```
 
-### 4. Setup Firestore Rules
+### 4. Setup Google Cloud Vision API (for Quick Add feature)
+Untuk menggunakan fitur Quick Add AI Scanner, ikuti panduan setup:
+- **Quick Start (5 menit):** [VISION_API_QUICKSTART.md](./VISION_API_QUICKSTART.md)
+- **Panduan Lengkap:** [QUICK_ADD_SETUP.md](./QUICK_ADD_SETUP.md)
+
+**Ringkas:**
+1. Buat project di Google Cloud Console
+2. Enable Cloud Vision API
+3. Setup billing (1000 request/bulan GRATIS)
+4. Create API Key
+5. Paste API Key di aplikasi saat pertama kali menggunakan Quick Add
+
+### 5. Setup Firestore Rules
 Pastikan Firestore rules di Firebase Console sudah dikonfigurasi untuk keamanan:
 ```
 rules_version = '2';
@@ -165,19 +197,19 @@ service cloud.firestore {
 }
 ```
 
-### 5. Jalankan Development Server
+### 6. Jalankan Development Server
 ```bash
 npm run dev
 ```
 
 Aplikasi akan berjalan di `http://localhost:5173`
 
-### 6. Build untuk Production
+### 7. Build untuk Production
 ```bash
 npm run build
 ```
 
-### 7. Preview Production Build
+### 8. Preview Production Build
 ```bash
 npm run preview
 ```
@@ -230,6 +262,7 @@ UI Rendering & User Interaction
 
 - **Exchange Rate API**: Untuk fetch real-time currency exchange rates
 - **Gold Price API**: Untuk fetch harga emas terkini
+- **Google Cloud Vision API**: Untuk OCR & text detection di Quick Add feature
 
 ## 📱 Responsive Design
 
@@ -241,6 +274,7 @@ UI Rendering & User Interaction
 
 | Feature | Status | Description |
 |---------|--------|-------------|
+| **Quick Add AI Scanner** | ✅ | Upload receipt & auto-detect transactions |
 | Dashboard Analytics | ✅ | Real-time financial overview |
 | Transaction Management | ✅ | Income, Expense, Transfer tracking |
 | Wallet Management | ✅ | Multi-wallet support with limits |
@@ -262,6 +296,7 @@ UI Rendering & User Interaction
 3. **HTTPS Only** - Deploy hanya dengan HTTPS
 4. **Data Encryption** - Sensitive data dienkripsi di Firestore
 5. **Auth Validation** - Server-side validation di backend rules
+6. **Vision API Key** - Restrict by domain & API untuk security
 
 ## 🐛 Troubleshooting
 
@@ -269,6 +304,12 @@ UI Rendering & User Interaction
 - Pastikan konfigurasi Firebase benar
 - Cek Firebase Console untuk status layanan
 - Verifikasi Firestore region
+
+### Vision API Error (Quick Add)
+- Pastikan API Key sudah benar
+- Cek apakah Vision API sudah enabled
+- Verifikasi billing account terhubung
+- Lihat [QUICK_ADD_SETUP.md](./QUICK_ADD_SETUP.md) untuk detail
 
 ### Exchange Rate API Error
 - Cek koneksi internet

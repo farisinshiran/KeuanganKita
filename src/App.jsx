@@ -1,14 +1,13 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+﻿import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import { 
   Plus, Minus, Wallet, TrendingUp, PieChart, Settings, Trash2, Save, X, 
   Menu, ArrowUpRight, ArrowDownRight, Coins, LogOut, Landmark, AlertTriangle, Target, Edit2, LogIn,
-  User, Calendar, CheckCircle, Eye, EyeOff, Moon, Sun, Heart, CreditCard, Banknote, Smartphone, ArrowRightLeft, Repeat, Briefcase, Globe, RefreshCw, Bot, ListFilter, DollarSign, BarChart3
+  User, Calendar, CheckCircle, Eye, EyeOff, Moon, Sun, Heart, CreditCard, Banknote, Smartphone, ArrowRightLeft, Repeat, Briefcase, Globe, RefreshCw, Bot, ListFilter, DollarSign, BarChart3, ScanLine, GraduationCap, Baby, School
 } from 'lucide-react';
 import { 
   PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip, Legend,
   LineChart, Line, XAxis, YAxis, CartesianGrid, AreaChart, Area
 } from 'recharts';
-import { initializeApp } from 'firebase/app';
 import { 
   getAuth, 
   onAuthStateChanged, 
@@ -18,49 +17,18 @@ import {
 } from 'firebase/auth';
 import { 
   getFirestore, collection, addDoc, query, where, onSnapshot, 
-  deleteDoc, doc, orderBy, serverTimestamp, updateDoc, setDoc
+  deleteDoc, doc, orderBy, serverTimestamp, updateDoc, setDoc, getDoc
 } from 'firebase/firestore';
 
-// --- 1. KONFIGURASI FIREBASE ---
-const firebaseConfig = {
-  apiKey: "AIzaSyAC5_LnGPcZtLyFB091FaUfEu6_AjJsLbQ",
-  authDomain: "dompet-keluarga-prod.firebaseapp.com",
-  projectId: "dompet-keluarga-prod",
-  storageBucket: "dompet-keluarga-prod.firebasestorage.app",
-  messagingSenderId: "68401529984",
-  appId: "1:68401529984:web:0749e9b641771b3064d265",
-  measurementId: "G-NKY1EL3HXN"
-};
+// --- 1. KONFIGURASI FIREBASE (MODULAR - SECURITY IMPROVED) ---
+// Import from separate config file (uses environment variables)
+import { app, auth, db, appId, APP_VERSION } from './config/firebase';
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = 'dompet-keluarga-prod'; 
-
-// --- 2. UTILITY FUNCTIONS ---
-const formatCurrency = (amount) => {
-  const num = Number(amount) || 0;
-  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
-};
-
-const formatDate = (date) => {
-  if (!date || typeof date.getTime !== 'function' || isNaN(date.getTime())) return '';
-  return new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' }).format(date);
-};
-
-const formatDateInput = (date) => {
-  if (!date || typeof date.toISOString !== 'function') return new Date().toISOString().split('T')[0];
-  return date.toISOString().split('T')[0];
-};
-
-// Helper: Parse tanggal dari berbagai format (Timestamp, String, Date)
-const parseDate = (val) => {
-  if (!val) return null;
-  if (val.toDate) return val.toDate(); // Firestore Timestamp
-  if (val instanceof Date) return val; // JS Date Object
-  const d = new Date(val); // String / Number
-  return isNaN(d.getTime()) ? null : d;
-};
+// --- 2. UTILITY FUNCTIONS (MODULAR) ---
+import { formatCurrency, formatDate, formatDateInput, parseDate } from './utils/formatters';
+import { categorizeBankingTransaction, categorizeMerchant } from './utils/parsers/categorize';
+import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES, DEFAULT_INVESTMENT_TYPES, DEFAULT_WALLETS } from './constants/categories';
+import { CURRENCIES, COLORS } from './constants/currencies';
 
 const fetchExchangeRate = async (currency) => {
   if (currency === 'IDR') return 1;
@@ -103,29 +71,402 @@ const fetchGoldPrice = async () => {
   }
 };
 
-// --- 3. CONSTANTS ---
-const DEFAULT_EXPENSE_CATEGORIES = ['Belanja Bulanan', 'Makan Luar', 'Transportasi', 'Listrik & Air', 'Pulsa & Internet', 'Zakat & Infaq', 'Pendidikan (SPP)', 'Cicilan Rumah', 'Kesehatan', 'Langganan'];
-const DEFAULT_INCOME_CATEGORIES = ['Gaji Pokok', 'Bonus/THR', 'Sampingan', 'Dividen'];
-const DEFAULT_INVESTMENT_TYPES = [
-  { name: 'Emas (Logam Mulia)', target: 100000000, deadline: null, icon: '🥇' },
-  { name: 'Saham Bluechip', target: 500000000, deadline: null, icon: '📊' },
-  { name: 'Reksadana Pasar Uang', target: 50000000, deadline: null, icon: '📈' }
-];
-const DEFAULT_WALLETS = [
-  { name: 'Dompet Tunai', type: 'cash', initialBalance: 0, limit: 0, icon: '💵' },
-  { name: 'Bank BCA', type: 'bank', initialBalance: 0, limit: 0, icon: '🏦' },
-  { name: 'Kartu Kredit Mandiri', type: 'credit_card', initialBalance: 0, limit: 10000000, icon: '💳' }
-];
-const CURRENCIES = [
-  { code: 'IDR', label: 'Rupiah (IDR)', symbol: 'Rp' },
-  { code: 'USD', label: 'US Dollar (USD)', symbol: '$' },
-  { code: 'SGD', label: 'Singapore Dollar (SGD)', symbol: 'S$' },
-  { code: 'EUR', label: 'Euro (EUR)', symbol: '€' },
-  { code: 'MYR', label: 'Malaysian Ringgit (MYR)', symbol: 'RM' },
-  { code: 'JPY', label: 'Japanese Yen (JPY)', symbol: '¥' },
-  { code: 'AUD', label: 'Australian Dollar (AUD)', symbol: 'A$' },
-];
-const COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6366F1'];
+// ============================================================
+// ROBUST RECEIPT & BANKING TRANSACTION PARSER v3.0
+// Supports: All banking apps, e-wallets, retail receipts, invoices, QRIS
+// ============================================================
+
+// Vision API Integration
+const analyzeReceiptWithVision = async (imageFile, apiKey) => {
+  try {
+    const base64Image = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(imageFile);
+    });
+
+    const response = await fetch(
+      `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requests: [{
+            image: { content: base64Image },
+            features: [
+              { type: 'DOCUMENT_TEXT_DETECTION', maxResults: 1 },
+              { type: 'TEXT_DETECTION' } // Additional text detection for better accuracy
+            ],
+            imageContext: { 
+              languageHints: ['id', 'en'],
+              textDetectionParams: {
+                enableTextDetectionConfidenceScore: true
+              }
+            }
+          }]
+        })
+      }
+    );
+
+    const data = await response.json();
+    if (data.error) throw new Error(data.error.message || 'Vision API error');
+    if (!data.responses?.[0]) throw new Error('No response from Vision API');
+
+    const fullTextAnnotation = data.responses[0].fullTextAnnotation;
+    const textAnnotations = data.responses[0].textAnnotations;
+    if (!textAnnotations?.length && !fullTextAnnotation) {
+      throw new Error('No text detected in image');
+    }
+
+    const fullText = fullTextAnnotation?.text || textAnnotations[0].description;
+    console.log('📝 OCR Raw Text:\n', fullText);
+    return parseReceiptText(fullText);
+  } catch (error) {
+    console.error('Vision API Error:', error);
+    throw error;
+  }
+};
+
+// --- Helper: Extract ALL amounts from a string ---
+const extractAmounts = (str) => {
+  const results = [];
+  const patterns = [
+    /(?:Rp\.?\s*|IDR\s*|Rp\s*)([+-]?\s*\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{2})?)/gi,
+    /(?:^|[\s(=:])([+-]?\s*\d{1,3}(?:\.\d{3})+(?:,\d{2})?)(?=[\s).,;]|$)/gm,
+    /(?:^|[\s(=:])([+-]?\s*\d{1,3}(?:,\d{3})+(?:\.\d{2})?)(?=[\s).,;]|$)/gm,
+    /(?:^|[\s(=:])([+-]?\s*\d{5,12})(?=[\s).,;]|$)/gm,
+  ];
+
+  for (const pattern of patterns) {
+    let m;
+    while ((m = pattern.exec(str)) !== null) {
+      let raw = m[1].replace(/\s/g, '');
+      const sign = raw.startsWith('-') ? -1 : 1;
+      raw = raw.replace(/^[+-]/, '');
+      let num;
+      if (/^\d{1,3}(\.\d{3})+(,\d{2})?$/.test(raw)) {
+        num = parseFloat(raw.replace(/\./g, '').replace(',', '.'));
+      } else if (/^\d{1,3}(,\d{3})+(\.\d{2})?$/.test(raw)) {
+        num = parseFloat(raw.replace(/,/g, ''));
+      } else {
+        num = parseFloat(raw.replace(/[.,]/g, ''));
+      }
+      if (!isNaN(num) && num >= 100 && num <= 99999999999) {
+        results.push({ amount: Math.round(num) * sign, index: m.index, raw: m[0].trim() });
+      }
+    }
+  }
+
+  // Deduplicate by absolute value (keep first occurrence)
+  const seen = new Set();
+  return results.filter(r => {
+    const key = Math.abs(r.amount);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+// --- Helper: Extract date from a string (Enhanced for mobile banking) ---
+const extractDate = (str, allowPartial = false) => {
+  const mm = { jan:0,feb:1,mar:2,apr:3,mei:4,may:4,jun:5,jul:6,aug:7,agu:7,sep:8,sept:8,oct:9,okt:9,nov:10,dec:11,des:11 };
+  const currentYear = new Date().getFullYear();
+  
+  const pats = [
+    // Full date formats
+    { re: /(\d{1,2})[\/\-.\s](\d{1,2})[\/\-.\s](\d{4})/, fn: m => new Date(+m[3], +m[2]-1, +m[1]) },
+    { re: /(\d{4})[\/\-.\s](\d{1,2})[\/\-.\s](\d{1,2})/, fn: m => new Date(+m[1], +m[2]-1, +m[3]) },
+    { re: /(\d{1,2})[\/\-.\s](\d{1,2})[\/\-.\s](\d{2})(?!\d)/, fn: m => new Date(2000+ +m[3], +m[2]-1, +m[1]) },
+    
+    // Month name formats
+    { re: /(\d{1,2})\s+(jan|feb|mar|apr|mei|may|jun|jul|aug|agu|sep|sept|oct|okt|nov|dec|des)\w*[\s,]+(\d{4})/i, fn: m => new Date(+m[3], mm[m[2].toLowerCase().substring(0,3)], +m[1]) },
+    { re: /(jan|feb|mar|apr|mei|may|jun|jul|aug|agu|sep|sept|oct|okt|nov|dec|des)\w*\s+(\d{1,2})[\s,]+(\d{4})/i, fn: m => new Date(+m[3], mm[m[1].toLowerCase().substring(0,3)], +m[2]) },
+    { re: /(\d{1,2})\s+(jan|feb|mar|apr|mei|may|jun|jul|aug|agu|sep|sept|oct|okt|nov|dec|des)\w*(?:\s+(\d{2}))?/i, fn: m => new Date(m[3]?2000+ +m[3]:currentYear, mm[m[2].toLowerCase().substring(0,3)], +m[1]) },
+    
+    // Common mobile banking formats (compact)
+    { re: /(\d{2})(\d{2})(\d{4})/, fn: m => new Date(+m[3], +m[2]-1, +m[1]) }, // ddmmyyyy
+    { re: /(\d{4})(\d{2})(\d{2})/, fn: m => new Date(+m[1], +m[2]-1, +m[3]) }, // yyyymmdd
+    
+    // Partial dates (if allowed) - uses current year
+    ...(allowPartial ? [
+      { re: /(\d{1,2})[\/\-.\s](\d{1,2})(?!\d)/, fn: m => new Date(currentYear, +m[2]-1, +m[1]) },
+      { re: /(\d{1,2})\s+(jan|feb|mar|apr|mei|may|jun|jul|aug|agu|sep|sept|oct|okt|nov|dec|des)\w*/i, fn: m => new Date(currentYear, mm[m[2].toLowerCase().substring(0,3)], +m[1]) },
+    ] : [])
+  ];
+  
+  for (const { re, fn } of pats) {
+    const m = str.match(re);
+    if (m) {
+      const d = fn(m);
+      if (d && !isNaN(d.getTime()) && d.getFullYear() >= 2020 && d.getFullYear() <= 2030) {
+        return d;
+      }
+    }
+  }
+  return null;
+};
+
+// --- Helper: Detect income vs expense ---
+const detectTxType = (ctxArr) => {
+  const ctx = ctxArr.join(' ').toLowerCase();
+  const expSigs = [/-\s*(?:rp|idr)/i, /\bDB\b|\bdebet\b|\bdebit\b/i, /keluar|out\b/i, /pembelian|purchase|bayar|payment/i, /transfer\s*ke|kirim|send/i, /tarik|withdraw/i, /belanja|beli\b/i, /biaya|fee|charge/i, /pengeluaran/i];
+  const incSigs = [/\+\s*(?:rp|idr)/i, /\bCR\b|\bkredit\b|\bcredit\b/i, /masuk|in\b/i, /terima|receive/i, /deposit|top\s?up/i, /gaji|salary/i, /cashback|reward|bonus/i, /pemasukan/i, /dari\b.*(?:transfer|trf)/i];
+  let e=0, i=0;
+  for (const p of expSigs) if (p.test(ctx)) e++;
+  for (const p of incSigs) if (p.test(ctx)) i++;
+  return i > e ? 'income' : 'expense';
+};
+
+// --- Main parser ---
+const parseReceiptText = (text) => {
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const lower = text.toLowerCase();
+  console.log('📄 Total lines:', lines.length);
+
+  // ====== PHASE 1: Detect document type ======
+  const bankKw = /mutasi|transaksi|saldo|transaction|balance|history|histori|riwayat|rekening|account|statement|e-?statement/i;
+  const bankApp = /wondr|bank\s*jago|jago|bni|bca|mandiri|bri|cimb|btn|bsi|permata|danamon|ocbc|jenius|livin|digibank|blu|seabank|neo|line\s*bank|allo\s*bank|superbank|most/i;
+  const ewallet = /gopay|ovo|dana|shopeepay|linkaja|isaku|sakuku|doku|flip/i;
+  const rcptKw = /total|subtotal|tax|ppn|kembalian|change|tunai|cash\b|kasir|cashier|receipt|struk|nota|invoice|faktur/i;
+  const qrisKw = /qris|qr\s*payment|scan.*bayar|merchant/i;
+
+  const isBank = bankKw.test(lower) || bankApp.test(lower);
+  const isEwallet = ewallet.test(lower);
+  const isReceipt = rcptKw.test(lower) && !isBank && !isEwallet;
+  const isQris = qrisKw.test(lower);
+
+  let source = 'unknown';
+  const srcMatch = text.match(bankApp) || text.match(ewallet);
+  if (srcMatch) source = srcMatch[0];
+  console.log(`🔍 Type: bank=${isBank}, ewallet=${isEwallet}, receipt=${isReceipt}, qris=${isQris}, src=${source}`);
+
+  // ====== PHASE 2: Global date ======
+  let globalDate = new Date();
+  for (const line of lines.slice(0, 15)) {
+    const d = extractDate(line, false);
+    if (d) { 
+      globalDate = d; 
+      console.log(`📅 Global date detected: ${d.toLocaleDateString('id-ID')} from line: "${line}"`);
+      break; 
+    }
+  }
+  if (!globalDate || globalDate.getTime() === new Date().getTime()) {
+    console.log('⚠️ No global date found, using today');
+  }
+
+  // ====== PHASE 3A: Banking / E-Wallet ======
+  if (isBank || isEwallet) {
+    console.log('🏦 Parsing as BANKING / E-WALLET');
+    const txs = [];
+    const used = new Set();
+    const noise = /^(mutasi|transaksi|histori|riwayat|saldo\s*(awal|akhir|tersedia|efektif)|opening|closing|rekening|account|period|no\.|halaman|page|\d{10,}|total\s*(?:debit|kredit|credit))/i;
+    const balanceNoise = /saldo\s*(awal|akhir|tersedia|efektif)|opening.*balance|closing.*balance|available.*balance/i;
+
+    // Find all amount-bearing lines
+    const amtLines = [];
+    for (let i = 0; i < lines.length; i++) {
+      if (noise.test(lines[i]) || balanceNoise.test(lines[i])) continue;
+      const amts = extractAmounts(lines[i]);
+      if (amts.length > 0) amtLines.push({ idx: i, line: lines[i], amts });
+    }
+    console.log(`💰 ${amtLines.length} lines with amounts`);
+
+    for (const al of amtLines) {
+      if (used.has(al.idx)) continue;
+      const i = al.idx;
+      const ctx = [];
+      for (let j = Math.max(0,i-3); j <= Math.min(lines.length-1,i+3); j++) ctx.push(lines[j]);
+
+      const primary = al.amts.reduce((a,b) => Math.abs(a.amount) > Math.abs(b.amount) ? a : b);
+      const amount = Math.abs(primary.amount);
+
+      const txType = detectTxType(ctx);
+
+      // Enhanced date search - look further and try harder
+      let txDate = null;
+      
+      // Strategy 1: Check surrounding lines (wider radius)
+      for (let j = Math.max(0,i-4); j <= Math.min(lines.length-1,i+2); j++) {
+        txDate = extractDate(lines[j], false);
+        if (txDate) break;
+      }
+      
+      // Strategy 2: Try combining adjacent lines (for split dates)
+      if (!txDate) {
+        for (let j = Math.max(0,i-3); j < Math.min(lines.length-1,i+2); j++) {
+          const combined = lines[j] + ' ' + lines[j+1];
+          txDate = extractDate(combined, false);
+          if (txDate) break;
+        }
+      }
+      
+      // Strategy 3: Allow partial dates (dd/mm without year)
+      if (!txDate) {
+        for (let j = Math.max(0,i-3); j <= Math.min(lines.length-1,i+2); j++) {
+          txDate = extractDate(lines[j], true);
+          if (txDate) break;
+        }
+      }
+      
+      // Strategy 4: Look for isolated date patterns in context window
+      if (!txDate) {
+        const contextText = ctx.join(' ');
+        txDate = extractDate(contextText, true);
+      }
+      
+      // Fallback to global date
+      if (!txDate) {
+        console.log(`⚠️ No date found for line ${i}: "${al.line.substring(0, 50)}..." - using global date`);
+        txDate = globalDate;
+      } else {
+        console.log(`📅 Date found for transaction: ${txDate.toLocaleDateString('id-ID')}`);
+      }
+
+      // Build description
+      let desc = '';
+      // Strategy 1: same line minus amount
+      const cleaned = al.line.replace(/(?:Rp\.?\s*|IDR\s*)?[+-]?\s*\d[\d.,\s]*\d/g, '').replace(/[+-]/g, '').trim();
+      if (cleaned.length > 2 && !/^[\d\s\/\-.,]+$/.test(cleaned)) desc = cleaned;
+
+      // Strategy 2-4: neighbor lines
+      if (!desc || desc.length < 3) {
+        for (const off of [-1, 1, -2, 2]) {
+          const ni = i + off;
+          if (ni < 0 || ni >= lines.length || used.has(ni)) continue;
+          const cand = lines[ni];
+          if (noise.test(cand) || balanceNoise.test(cand)) continue;
+          if (extractAmounts(cand).length > 0 && off > 0) continue;
+          if (/^[\d\s\/\-.,]+$/.test(cand)) continue;
+          const c2 = cand.replace(/\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}/g, '').replace(/\d{1,2}\s+(?:jan|feb|mar|apr|mei|jun|jul|aug|sep|oct|nov|dec)\w*/gi, '').trim();
+          if (c2.length > 2) { desc = c2; used.add(ni); break; }
+        }
+      }
+
+      desc = desc.replace(/^(tanggal|date|desc|keterangan|nominal|amount|jumlah|db|cr|debit|kredit|type)[:;\s-]*/gi, '').replace(/\s{2,}/g, ' ').trim();
+      if (!desc || desc.length < 2) desc = `Transaksi ${source}`;
+      if (desc.length > 120) desc = desc.substring(0, 117) + '...';
+
+      txs.push({ amount, category: categorizeBankingTransaction(desc, txType === 'expense'), note: desc, date: txDate, type: txType, selected: true });
+      used.add(i);
+    }
+
+    if (txs.length > 0) {
+      console.log(`✅ Banking: ${txs.length} transactions`);
+      return txs;
+    }
+    console.log('⚠️ Banking parser found 0, falling through...');
+  }
+
+  // ====== PHASE 3B: QRIS / Single payment ======
+  if (isQris || (!isBank && !isEwallet && !isReceipt)) {
+    const all = [];
+    for (const line of lines) all.push(...extractAmounts(line));
+    if (all.length > 0 && all.length <= 5) {
+      const main = all.reduce((a,b) => Math.abs(a.amount) > Math.abs(b.amount) ? a : b);
+      let desc = '';
+      for (const line of lines) {
+        if (/merchant|toko|nama|kepada|to\b|penerima|receiver/i.test(line)) {
+          desc = line.replace(/merchant|toko|nama|kepada|to|penerima|receiver|[:;\s]/gi, '').trim();
+          break;
+        }
+      }
+      if (!desc) desc = lines.filter(l => !/^[\d\s\/\-.,+Rp]+$/i.test(l) && l.length > 3).sort((a,b) => b.length - a.length)[0] || 'Pembayaran';
+      const t = detectTxType(lines);
+      console.log(`✅ Single payment: ${desc}`);
+      return [{ amount: Math.abs(main.amount), category: categorizeBankingTransaction(desc, t==='expense'), note: desc.substring(0,120), date: globalDate, type: t, selected: true }];
+    }
+  }
+
+  // ====== PHASE 3C: Retail receipt ======
+  console.log('🧾 Parsing as RETAIL RECEIPT');
+  const txs = [];
+
+  // Merchant detection
+  const mdb = [
+    [/indomaret/i,'Indomaret'],[/alfamart|alfamidi/i,'Alfamart'],[/superindo/i,'Super Indo'],
+    [/giant|hero/i,'Giant'],[/carrefour|transmart/i,'Transmart'],[/hypermart/i,'Hypermart'],
+    [/mcdonald|mcd\b/i,"McDonald's"],[/kfc/i,'KFC'],[/burger\s*king/i,'Burger King'],
+    [/pizza\s*hut/i,'Pizza Hut'],[/domino/i,"Domino's"],[/starbucks|sbux/i,'Starbucks'],
+    [/jco|j\.co/i,'J.CO'],[/chatime/i,'Chatime'],[/mixue/i,'Mixue'],
+    [/hokben|hoka/i,'HokBen'],[/solaria/i,'Solaria'],[/yoshinoya/i,'Yoshinoya'],
+    [/grab/i,'Grab'],[/gojek|goto/i,'Gojek'],[/shopee/i,'Shopee'],
+    [/tokopedia|tokped/i,'Tokopedia'],[/lazada/i,'Lazada'],[/bukalapak/i,'Bukalapak'],
+    [/blibli/i,'Blibli'],[/pertamina/i,'Pertamina'],[/shell/i,'Shell'],
+    [/ikea/i,'IKEA'],[/uniqlo/i,'Uniqlo'],[/miniso/i,'Miniso'],
+    [/ace\s*hardware/i,'ACE Hardware'],[/guardian|watsons/i,'Guardian'],
+    [/daiso/i,'Daiso'],[/mr\.?\s*diy/i,'Mr. DIY'],[/lotte/i,'Lotte Mart'],
+  ];
+  let merchant = '';
+  for (const line of lines.slice(0,8)) {
+    for (const [re,name] of mdb) { if (re.test(line)) { merchant = name; break; } }
+    if (merchant) break;
+  }
+  if (!merchant) merchant = lines.slice(0,5).find(l => l.length > 3 && !/^[\d\s\/\-.,+:]+$/.test(l) && !/tanggal|date|kasir|receipt|struk/i.test(l)) || '';
+
+  // Find total
+  let totalAmt = 0, totalIdx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (/(?:grand\s*)?total|total\s*(?:bayar|belanja|harga|pembayaran|tagihan)|amount\s*due|jumlah\s*(?:bayar|total)?/i.test(lines[i])) {
+      let amts = extractAmounts(lines[i]);
+      if (!amts.length && i+1 < lines.length) amts = extractAmounts(lines[i+1]);
+      if (amts.length) {
+        const big = amts.reduce((a,b) => Math.abs(a.amount)>Math.abs(b.amount)?a:b);
+        totalAmt = Math.abs(big.amount);
+        totalIdx = i;
+      }
+    }
+  }
+
+  // Parse items
+  for (let i = 0; i < lines.length; i++) {
+    if (i === totalIdx) continue;
+    const line = lines[i];
+    if (/kasir|cashier|struk|receipt|terima\s*kasih|thank|member|nota|invoice|no\.|telp|alamat|address/i.test(line)) continue;
+    if (/total|subtotal|tax|ppn|diskon|discount|kembalian|change|tunai|cash\b|debit|kredit|credit|visa|master/i.test(line)) continue;
+
+    const amts = extractAmounts(line);
+    if (amts.length > 0) {
+      const a = amts.reduce((x,y) => Math.abs(x.amount)>Math.abs(y.amount)?x:y);
+      const abs = Math.abs(a.amount);
+      if (abs < 500 || (totalAmt > 0 && abs === totalAmt)) continue;
+
+      let item = line.replace(/(?:Rp\.?\s*|IDR\s*)?[+-]?\s*\d[\d.,\s]*\d/g, '').replace(/[xX*@]\s*\d+/g, '').trim();
+      if (item.length < 2 && i > 0 && !extractAmounts(lines[i-1]).length) item = lines[i-1].trim();
+      if (item.length < 2) item = `Item ${txs.length+1}`;
+
+      txs.push({ amount: abs, category: categorizeBankingTransaction(merchant||item, true), note: merchant ? `${merchant} - ${item}` : item, date: globalDate, type: 'expense', selected: true });
+    }
+  }
+
+  if (!txs.length && totalAmt > 0) {
+    txs.push({ amount: totalAmt, category: categorizeBankingTransaction(merchant, true), note: merchant || 'Pembelian', date: globalDate, type: 'expense', selected: true });
+  }
+
+  // ====== PHASE 4: Ultimate fallback ======
+  if (!txs.length) {
+    console.log('🔄 Fallback: extracting all amounts');
+    const all = [];
+    for (const line of lines) for (const a of extractAmounts(line)) if (Math.abs(a.amount)>=1000) all.push({...a,line});
+    const seen = new Set();
+    const uniq = all.filter(a => { const k=Math.abs(a.amount); if(seen.has(k))return false; seen.add(k); return true; }).sort((a,b)=>Math.abs(b.amount)-Math.abs(a.amount));
+    for (const a of uniq.slice(0,10)) {
+      let note = a.line.replace(/(?:Rp\.?\s*|IDR\s*)?[+-]?\s*\d[\d.,\s]*\d/g,'').trim();
+      if (note.length < 2) note = merchant || 'Transaksi';
+      txs.push({ amount: Math.abs(a.amount), category: 'Belanja Bulanan', note: note.substring(0,120), date: globalDate, type: 'expense', selected: false });
+    }
+  }
+
+  if (!txs.length) {
+    return [{ amount: 0, category: 'Belanja Bulanan', note: '⚠️ Gagal baca otomatis: '+text.substring(0,150), date: new Date(), type: 'expense', selected: false }];
+  }
+
+  console.log(`✅ Total: ${txs.length} transactions`);
+  return txs;
+};
+
+// --- 3. CONSTANTS (Using imported modules) ---
+// Constants are imported from ./constants/categories and ./constants/currencies
 
 // Mapping service name to icon
 const SERVICE_ICONS = {
@@ -479,6 +820,751 @@ const DashboardView = ({ summary, transactions, investments, categories, investT
   );
 };
 
+const QuickAddModal = ({ isOpen, onClose, categories, wallets, userId, appId, fmt }) => {
+  const [uploadedImage, setUploadedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [detectedTransactions, setDetectedTransactions] = useState([]);
+  const [apiKey, setApiKey] = useState('');
+  const [showApiKeyInput, setShowApiKeyInput] = useState(false);
+  const [isLoadingApiKey, setIsLoadingApiKey] = useState(true);
+  const fileInputRef = useRef(null);
+
+  // Load API key from Firestore when modal opens
+  useEffect(() => {
+    if (!isOpen || !userId) return;
+
+    const loadApiKey = async () => {
+      try {
+        setIsLoadingApiKey(true);
+        const userSettingsRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'visionApi');
+        const docSnap = await getDoc(userSettingsRef);
+        
+        if (docSnap.exists() && docSnap.data().apiKey) {
+          const savedKey = docSnap.data().apiKey;
+          setApiKey(savedKey);
+          setShowApiKeyInput(false);
+          console.log('✅ API Key loaded from Firestore');
+        } else {
+          // Fallback: check localStorage for migration
+          const localKey = localStorage.getItem('visionApiKey');
+          if (localKey) {
+            setApiKey(localKey);
+            // Migrate to Firestore
+            await saveApiKeyToFirestore(localKey);
+            localStorage.removeItem('visionApiKey'); // Clean up
+            console.log('✅ API Key migrated from localStorage to Firestore');
+          } else {
+            setShowApiKeyInput(true);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error loading API key:', error);
+        // Fallback to localStorage
+        const localKey = localStorage.getItem('visionApiKey');
+        if (localKey) {
+          setApiKey(localKey);
+        } else {
+          setShowApiKeyInput(true);
+        }
+      } finally {
+        setIsLoadingApiKey(false);
+      }
+    };
+
+    loadApiKey();
+  }, [isOpen, userId, appId]);
+
+  // Reset all states when modal closes to prevent stuck states
+  useEffect(() => {
+    if (!isOpen) {
+      console.log('🚪 Modal closed, resetting all Quick Add states');
+      setUploadedImage(null);
+      setImagePreview(null);
+      setDetectedTransactions([]);
+      setIsProcessing(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  }, [isOpen]);
+
+  // Save API key to Firestore
+  const saveApiKeyToFirestore = async (key) => {
+    try {
+      const userSettingsRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'visionApi');
+      await setDoc(userSettingsRef, {
+        apiKey: key,
+        updatedAt: serverTimestamp()
+      });
+      console.log('✅ API Key saved to Firestore');
+    } catch (error) {
+      console.error('❌ Error saving API key:', error);
+      // Fallback: save to localStorage
+      localStorage.setItem('visionApiKey', key);
+    }
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadedImage(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setImagePreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleAnalyze = async () => {
+    if (!uploadedImage) {
+      alert('Pilih gambar terlebih dahulu');
+      return;
+    }
+
+    if (!apiKey.trim()) {
+      alert('Masukkan API Key Google Cloud Vision terlebih dahulu');
+      setShowApiKeyInput(true);
+      return;
+    }
+
+    console.log('🚀 Starting analysis...');
+    setIsProcessing(true);
+    
+    try {
+      console.log('📸 Analyzing image with Vision API...');
+      const transactions = await analyzeReceiptWithVision(uploadedImage, apiKey);
+      
+      console.log(`✅ Analysis complete: ${transactions.length} transactions found`);
+      
+      if (!transactions || transactions.length === 0) {
+        throw new Error('No transactions detected from image');
+      }
+      
+      // Initialize with default values
+      const initializedTransactions = transactions.map((t, idx) => ({
+        ...t,
+        id: `temp-${Date.now()}-${idx}`,
+        walletId: wallets[0]?.id || '',
+        selected: true
+      }));
+      
+      setDetectedTransactions(initializedTransactions);
+      console.log('💾 Transactions set to state');
+      
+      // Save API key to Firestore for future use
+      try {
+        await saveApiKeyToFirestore(apiKey);
+        setShowApiKeyInput(false);
+        console.log('🔑 API Key saved');
+      } catch (saveError) {
+        console.warn('⚠️ Failed to save API key:', saveError);
+        // Don't fail the whole process if saving key fails
+      }
+    } catch (error) {
+      console.error('❌ Analysis error:', error);
+      let errorMessage = 'Gagal menganalisis gambar. ';
+      
+      if (error.message && error.message.includes('No text detected')) {
+        errorMessage += 'Tidak ada teks yang terdeteksi. Pastikan gambar jelas dan tidak blur.';
+      } else if (error.message && error.message.includes('No transactions detected')) {
+        errorMessage += 'Tidak ada transaksi yang terdeteksi. Pastikan screenshot adalah histori transaksi.';
+      } else if (error.message && error.message.includes('API')) {
+        errorMessage += 'Masalah dengan API Key. Pastikan API Key benar dan aktif.';
+      } else if (error.message) {
+        errorMessage += error.message;
+      } else {
+        errorMessage += 'Pastikan:\n- Screenshot jelas & tidak blur\n- Text mudah dibaca\n- Format histori transaksi lengkap\n- API Key benar';
+      }
+      
+      alert(errorMessage);
+      
+      // Reset state on error
+      setDetectedTransactions([]);
+    } finally {
+      console.log('🏁 Analysis finished, resetting processing state');
+      setIsProcessing(false);
+    }
+  };
+
+  const handleUpdateTransaction = (id, field, value) => {
+    setDetectedTransactions(prev =>
+      prev.map(t => (t.id === id ? { ...t, [field]: value } : t))
+    );
+  };
+
+  const handleToggleSelect = (id) => {
+    setDetectedTransactions(prev =>
+      prev.map(t => (t.id === id ? { ...t, selected: !t.selected } : t))
+    );
+  };
+
+  const handleApproveSelected = async () => {
+    const selected = detectedTransactions.filter(t => t.selected);
+    
+    if (selected.length === 0) {
+      alert('Pilih minimal 1 transaksi untuk disimpan');
+      return;
+    }
+
+    // Validate
+    const invalid = selected.find(t => !t.walletId || !t.category || !t.amount || t.amount <= 0);
+    if (invalid) {
+      alert('Pastikan semua transaksi yang dipilih memiliki nominal, kategori, dan akun yang valid');
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const batch = selected.map(t => {
+        const payload = {
+          type: t.type,
+          amount: Number(t.amount),
+          category: t.category,
+          walletId: t.walletId,
+          note: t.note || '',
+          date: t.date || new Date(),
+          quickAddSource: true, // Penanda transaksi dari Quick Add AI Scanner
+          createdAt: serverTimestamp()
+        };
+        return addDoc(collection(db, 'artifacts', appId, 'users', userId, 'transactions'), payload);
+      });
+
+      await Promise.all(batch);
+      
+      // Success - cleanup everything
+      console.log(`✅ ${selected.length} transaksi berhasil disimpan`);
+      alert(`${selected.length} transaksi berhasil ditambahkan!`);
+      
+      // Clear uploaded image dan semua data
+      handleReset();
+      
+      // Close modal
+      onClose();
+    } catch (error) {
+      console.error('❌ Bulk add error:', error);
+      alert('Gagal menambahkan transaksi');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleReset = () => {
+    // Revoke object URL untuk free memory
+    if (imagePreview && imagePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(imagePreview);
+    }
+    
+    // Clear all states
+    setUploadedImage(null);
+    setImagePreview(null);
+    setDetectedTransactions([]);
+    setIsProcessing(false); // Ensure processing state is always reset
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    
+    console.log('🔄 Quick Add reset complete');
+  };
+
+  const handleDeleteTransaction = (id) => {
+    setDetectedTransactions(prev => prev.filter(t => t.id !== id));
+  };
+
+  // Cleanup saat modal ditutup
+  const handleClose = () => {
+    // Reset semua data termasuk image
+    handleReset();
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center animate-in fade-in duration-200" onClick={handleClose}>
+      <div className="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-6xl sm:w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-300" onClick={(e) => e.stopPropagation()}>
+        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700 p-4 sm:p-6 flex justify-between items-center z-10">
+          <h2 className="text-base sm:text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+            <Bot size={20} className="text-emerald-600 dark:text-emerald-400 sm:w-6 sm:h-6" />
+            <span className="hidden sm:inline">Quick Add - AI Receipt Scanner</span>
+            <span className="sm:hidden">Quick Add AI</span>
+          </h2>
+          <button onClick={handleClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors touch-manipulation" aria-label="Close">
+            <X size={20} className="text-gray-500 dark:text-gray-400" />
+          </button>
+        </div>
+
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+          {/* Loading State */}
+          {isLoadingApiKey && (
+            <div className="flex items-center justify-center gap-3 py-4">
+              <RefreshCw size={20} className="animate-spin text-emerald-600" />
+              <span className="text-sm text-gray-600 dark:text-gray-400">Memuat API Key...</span>
+            </div>
+          )}
+
+          {/* API Key Section */}
+          {!isLoadingApiKey && showApiKeyInput && (
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="text-yellow-600 dark:text-yellow-400 mt-0.5" size={20} />
+                <div className="flex-1 space-y-3">
+                  <div>
+                    <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-1">Setup Google Cloud Vision API</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Masukkan API Key Anda untuk menggunakan fitur AI Scanner. API Key akan tersimpan di akun Anda dan tersinkronisasi di semua device.
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="password"
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      placeholder="Paste API Key di sini..."
+                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 dark:text-white text-sm"
+                      disabled={isProcessing}
+                    />
+                    <button
+                      onClick={async () => {
+                        if (apiKey.trim()) {
+                          setIsProcessing(true);
+                          await saveApiKeyToFirestore(apiKey.trim());
+                          setIsProcessing(false);
+                          setShowApiKeyInput(false);
+                        }
+                      }}
+                      disabled={!apiKey.trim() || isProcessing}
+                      className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isProcessing ? 'Menyimpan...' : 'Simpan'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!isLoadingApiKey && !showApiKeyInput && apiKey && (
+            <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-300">
+                  <CheckCircle size={16} className="text-emerald-600 dark:text-emerald-400" />
+                  <span className="font-medium">API Key tersimpan di akun Anda</span>
+                  <span className="text-xs text-emerald-600 dark:text-emerald-500">(sync semua device)</span>
+                </div>
+                <button 
+                  onClick={() => setShowApiKeyInput(true)} 
+                  className="text-sm text-emerald-600 dark:text-emerald-400 hover:underline font-medium"
+                >
+                  Ubah
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Upload Section - Show only if API key is loaded */}
+          {!isLoadingApiKey && (
+          <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-4 sm:p-8 text-center">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+              id="receipt-upload"
+            />
+            
+            {!imagePreview ? (
+              <label htmlFor="receipt-upload" className="cursor-pointer block">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center">
+                    <Bot size={32} className="text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-semibold text-gray-700 dark:text-gray-300">Upload Screenshot / Foto Struk</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Tap untuk memilih gambar</p>
+                    
+                    {/* Tips untuk hasil terbaik */}
+                    <div className="mt-4 text-xs text-left bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                      <p className="font-semibold text-blue-700 dark:text-blue-400 mb-2">💡 Tips untuk hasil terbaik:</p>
+                      <ul className="space-y-1 text-blue-600 dark:text-blue-300">
+                        <li>• <strong>Screenshot histori transaksi lengkap</strong> (tanggal, deskripsi, nominal)</li>
+                        <li>• Pastikan text <strong>jelas & tidak blur</strong></li>
+                        <li>• Hindari <strong>refleksi cahaya</strong> pada layar</li>
+                        <li>• Screenshot <strong>dari dalam aplikasi</strong>, bukan foto layar HP</li>
+                        <li>• Support: BCA, Mandiri, BRI, Wondr BNI, Jago, OVO, GoPay, Dana, struk belanja</li>
+                      </ul>
+                    </div>
+                  </div>
+                  <div className="mt-3 px-6 py-3 sm:py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium active:bg-emerald-800 transition-colors min-h-[48px] flex items-center justify-center touch-manipulation">
+                    Pilih Gambar
+                  </div>
+                </div>
+              </label>
+            ) : (
+              <div className="space-y-4">
+                <img src={imagePreview} alt="Preview" className="max-h-64 mx-auto rounded-lg shadow-lg" />
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center">
+                  <button
+                    onClick={handleReset}
+                    className="px-4 py-3 sm:py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium touch-manipulation min-h-[48px]"
+                  >
+                    Ganti Gambar
+                  </button>
+                  <button
+                    onClick={handleAnalyze}
+                    disabled={isProcessing}
+                    className="px-6 py-3 sm:py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 touch-manipulation min-h-[48px]"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <RefreshCw size={18} className="animate-spin" />
+                        Menganalisis...
+                      </>
+                    ) : (
+                      <>
+                        <Bot size={18} />
+                        Analisis dengan AI
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+          )}
+
+          {/* Detected Transactions Table */}
+          {!isLoadingApiKey && detectedTransactions.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base sm:text-lg font-bold text-gray-800 dark:text-gray-100">
+                  Transaksi Terdeteksi ({detectedTransactions.filter(t => t.selected).length} dipilih)
+                </h3>
+                <button
+                  onClick={() => setDetectedTransactions(prev => prev.map(t => ({ ...t, selected: !prev[0].selected })))}
+                  className="text-xs sm:text-sm text-emerald-600 hover:underline min-h-[48px] px-2 touch-manipulation"
+                >
+                  {detectedTransactions[0]?.selected ? 'Unselect All' : 'Select All'}
+                </button>
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto border dark:border-gray-700 rounded-lg">
+                <table className="w-full">
+                  <thead className="bg-gray-50 dark:bg-gray-700/50">
+                    <tr>
+                      <th className="px-4 py-3 text-left">
+                        <input type="checkbox" checked={detectedTransactions.every(t => t.selected)} onChange={() => setDetectedTransactions(prev => prev.map(t => ({ ...t, selected: !prev.every(x => x.selected) })))} className="rounded" />
+                      </th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Nominal</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Kategori</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Akun</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Tanggal</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Catatan</th>
+                      <th className="px-4 py-3"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y dark:divide-gray-700">
+                    {detectedTransactions.map((t) => (
+                      <tr key={t.id} className={`${t.selected ? 'bg-emerald-50/50 dark:bg-emerald-900/10' : 'bg-white dark:bg-gray-800'}`}>
+                        <td className="px-4 py-3">
+                          <input
+                            type="checkbox"
+                            checked={t.selected}
+                            onChange={() => handleToggleSelect(t.id)}
+                            className="rounded"
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <input
+                            type="number"
+                            value={t.amount}
+                            onChange={(e) => handleUpdateTransaction(t.id, 'amount', e.target.value)}
+                            className="w-32 px-2 py-1 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white text-sm"
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <select
+                            value={t.category}
+                            onChange={(e) => handleUpdateTransaction(t.id, 'category', e.target.value)}
+                            className="w-full px-2 py-1 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white text-sm"
+                          >
+                            {categories.expense.map((cat) => (
+                              <option key={cat} value={cat}>{cat}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-4 py-3">
+                          <select
+                            value={t.walletId}
+                            onChange={(e) => handleUpdateTransaction(t.id, 'walletId', e.target.value)}
+                            className="w-full px-2 py-1 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white text-sm"
+                          >
+                            {wallets.map((w) => (
+                              <option key={w.id} value={w.id}>{w.icon} {w.name}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-4 py-3">
+                          <input
+                            type="date"
+                            value={formatDateInput(t.date)}
+                            onChange={(e) => handleUpdateTransaction(t.id, 'date', new Date(e.target.value))}
+                            className="w-full px-2 py-1 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white text-sm"
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <input
+                            type="text"
+                            value={t.note}
+                            onChange={(e) => handleUpdateTransaction(t.id, 'note', e.target.value)}
+                            className="w-full px-2 py-1 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white text-sm"
+                            placeholder="Catatan..."
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => handleDeleteTransaction(t.id)}
+                            className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden space-y-3">
+                {detectedTransactions.map((t) => (
+                  <div
+                    key={t.id}
+                    className={`border dark:border-gray-700 rounded-lg p-4 space-y-3 ${
+                      t.selected ? 'bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-300 dark:border-emerald-700' : 'bg-white dark:bg-gray-800'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={t.selected}
+                          onChange={() => handleToggleSelect(t.id)}
+                          className="rounded min-w-[24px] min-h-[24px]"
+                        />
+                        <div className="text-lg font-bold text-gray-800 dark:text-gray-100">
+                          Rp {Number(t.amount).toLocaleString('id-ID')}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteTransaction(t.id)}
+                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded min-h-[48px] min-w-[48px] touch-manipulation flex items-center justify-center"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Nominal</label>
+                        <input
+                          type="number"
+                          value={t.amount}
+                          onChange={(e) => handleUpdateTransaction(t.id, 'amount', e.target.value)}
+                          className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white text-sm min-h-[48px] touch-manipulation"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Kategori</label>
+                        <select
+                          value={t.category}
+                          onChange={(e) => handleUpdateTransaction(t.id, 'category', e.target.value)}
+                          className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white text-sm min-h-[48px] touch-manipulation"
+                        >
+                          {categories.expense.map((cat) => (
+                            <option key={cat} value={cat}>{cat}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Akun</label>
+                        <select
+                          value={t.walletId}
+                          onChange={(e) => handleUpdateTransaction(t.id, 'walletId', e.target.value)}
+                          className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white text-sm min-h-[48px] touch-manipulation"
+                        >
+                          {wallets.map((w) => (
+                            <option key={w.id} value={w.id}>{w.icon} {w.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Tanggal</label>
+                        <input
+                          type="date"
+                          value={formatDateInput(t.date)}
+                          onChange={(e) => handleUpdateTransaction(t.id, 'date', new Date(e.target.value))}
+                          className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white text-sm min-h-[48px] touch-manipulation"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Catatan</label>
+                        <input
+                          type="text"
+                          value={t.note}
+                          onChange={(e) => handleUpdateTransaction(t.id, 'note', e.target.value)}
+                          className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white text-sm min-h-[48px] touch-manipulation"
+                          placeholder="Catatan..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col sm:flex-row justify-end gap-3">
+                <button
+                  onClick={handleReset}
+                  className="w-full sm:w-auto px-6 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium min-h-[48px] touch-manipulation"
+                >
+                  Reset
+                </button>
+                <button
+                  onClick={handleApproveSelected}
+                  disabled={isProcessing || detectedTransactions.filter(t => t.selected).length === 0}
+                  className="w-full sm:w-auto px-8 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[48px] touch-manipulation"
+                >
+                  <CheckCircle size={18} />
+                  Approve & Simpan ({detectedTransactions.filter(t => t.selected).length})
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const TransactionModal = ({ isOpen, onClose, categories, wallets, userId, appId, fmt }) => {
+  const [formData, setFormData] = useState({ id: null, type: 'expense', amount: '', category: '', walletId: '', sourceWalletId: '', targetWalletId: '', note: '', date: formatDateInput(new Date()) });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const payload = { 
+      ...formData, 
+      amount: Number(formData.amount), 
+      date: new Date(formData.date), 
+      updatedAt: serverTimestamp() 
+    };
+    delete payload.id;
+
+    try {
+      if (formData.id) {
+        await updateDoc(doc(db, 'artifacts', appId, 'users', userId, 'transactions', formData.id), payload);
+      } else {
+        await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'transactions'), { ...payload, createdAt: serverTimestamp() });
+      }
+      setFormData({ id: null, type: 'expense', amount: '', category: '', walletId: '', sourceWalletId: '', targetWalletId: '', note: '', date: formatDateInput(new Date()) });
+      onClose();
+    } catch (err) { 
+      console.error(err); 
+      alert('Gagal menyimpan transaksi');
+    }
+  };
+
+  const cats = formData.type === 'expense' ? categories.expense : categories.income;
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={onClose}>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 slide-in-from-bottom-4 duration-300" onClick={(e) => e.stopPropagation()}>
+        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700 p-6 flex justify-between items-center">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+            <Plus size={24} className="text-emerald-600 dark:text-emerald-400"/>
+            Transaksi Baru
+          </h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+            <X size={24}/>
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+             <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Jenis Transaksi</label>
+                <div className="flex gap-2">
+                  <button type="button" onClick={()=>setFormData({...formData, type:'income', category:'', sourceWalletId: '', targetWalletId: ''})} className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all border ${formData.type==='income'?'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700 ring-2 ring-green-500/20':'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'}`}>Pemasukan</button>
+                  <button type="button" onClick={()=>setFormData({...formData, type:'expense', category:'', sourceWalletId: '', targetWalletId: ''})} className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all border ${formData.type==='expense'?'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700 ring-2 ring-red-500/20':'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'}`}>Pengeluaran</button>
+                  <button type="button" onClick={()=>setFormData({...formData, type:'transfer', category:''})} className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all border ${formData.type==='transfer'?'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700 ring-2 ring-blue-500/20':'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'}`}>Transfer</button>
+                </div>
+             </div>
+             
+             <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Jumlah (Rp)</label>
+                <input type="number" required value={formData.amount} onChange={e=>setFormData({...formData, amount:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white dark:bg-gray-700 dark:text-white" placeholder="0"/>
+             </div>
+
+             {formData.type === 'transfer' ? (
+                <>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Dari (Sumber)</label>
+                    <select required value={formData.sourceWalletId} onChange={e=>setFormData({...formData, sourceWalletId:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 dark:text-white dark:[&>option]:bg-gray-800">
+                      <option value="">Pilih Sumber...</option>
+                      {wallets.map(w=><option key={w.id} value={w.id}>{w.icon} {w.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Ke (Tujuan)</label>
+                    <select required value={formData.targetWalletId} onChange={e=>setFormData({...formData, targetWalletId:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 dark:text-white dark:[&>option]:bg-gray-800">
+                      <option value="">Pilih Tujuan...</option>
+                      {wallets.filter(w => w.id !== formData.sourceWalletId).map(w=><option key={w.id} value={w.id}>{w.icon} {w.name}</option>)}
+                    </select>
+                  </div>
+                </>
+             ) : (
+                <>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Kantong / Akun</label>
+                    <select required value={formData.walletId} onChange={e=>setFormData({...formData, walletId:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 dark:text-white dark:[&>option]:bg-gray-800">
+                      <option value="">Pilih Akun...</option>
+                      {wallets.map(w=><option key={w.id} value={w.id}>{w.icon} {w.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Kategori</label>
+                    <select required value={formData.category} onChange={e=>setFormData({...formData, category:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 dark:text-white transition-all dark:[&>option]:bg-gray-800"><option value="">Pilih Kategori...</option>{cats.map(c=><option key={c} value={c}>{c}</option>)}</select>
+                  </div>
+                </>
+             )}
+
+             <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Tanggal</label>
+                <input type="date" required value={formData.date} onChange={e=>setFormData({...formData, date:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white dark:bg-gray-700 dark:text-white"/>
+             </div>
+             <div className="md:col-span-2 space-y-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Catatan</label>
+                <input value={formData.note} onChange={e=>setFormData({...formData, note:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white dark:bg-gray-700 dark:text-white" placeholder="Opsional"/>
+             </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <button type="button" onClick={onClose} className="px-6 py-2.5 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">Batal</button>
+            <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-2.5 rounded-lg font-medium flex items-center gap-2 shadow-lg shadow-emerald-200/50 dark:shadow-emerald-900/30 transition-all"><Save size={18}/> Simpan Transaksi</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 const TransactionView = ({ transactions, categories, wallets, userId, appId, fmt }) => {
   const [formData, setFormData] = useState({ id: null, type: 'expense', amount: '', category: '', walletId: '', sourceWalletId: '', targetWalletId: '', note: '', date: formatDateInput(new Date()) });
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -643,7 +1729,8 @@ const TransactionView = ({ transactions, categories, wallets, userId, appId, fmt
       )}
 
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-colors duration-300">
-        <div className="overflow-x-auto">
+        {/* Desktop table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left">
             <thead className="bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600"><tr><th className="p-4 text-xs font-semibold text-gray-500 dark:text-gray-300">TANGGAL</th><th className="p-4 text-xs font-semibold text-gray-500 dark:text-gray-300">AKUN/DETAIL</th><th className="p-4 text-xs font-semibold text-gray-500 dark:text-gray-300">KATEGORI</th><th className="p-4 text-xs font-semibold text-gray-500 dark:text-gray-300">CATATAN</th><th className="p-4 text-xs font-semibold text-gray-500 dark:text-gray-300 text-right">JUMLAH</th><th className="p-4 w-20"></th></tr></thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -679,13 +1766,16 @@ const TransactionView = ({ transactions, categories, wallets, userId, appId, fmt
                       {t.subscriptionId && (
                          <span className="ml-2" title="Auto-generated"><Bot size={12} className="inline text-purple-500"/></span>
                       )}
+                      {t.quickAddSource && (
+                         <span className="ml-2" title="Ditambahkan via Quick Add AI Scanner"><ScanLine size={12} className="inline text-emerald-500"/></span>
+                      )}
                     </td>
                     <td className="p-4 text-sm text-gray-600 dark:text-gray-400 truncate max-w-xs">{t.note||'-'}</td>
                     <td className={`p-4 text-sm font-medium text-right whitespace-nowrap ${t.type==='income'?'text-green-600 dark:text-green-400': t.type === 'expense' || t.type === 'investment' ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`}>
                       {t.type==='income' ? '+' : (t.type === 'expense' || t.type === 'investment') ? '-' : ''}{fmt(t.amount)}
                     </td>
                     <td className="p-4 text-right flex justify-end gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                      {t.type !== 'investment' && ( // Prevent editing investment transactions directly here for simplicity
+                      {t.type !== 'investment' && (
                         <button onClick={()=>handleEdit(t)} className="text-blue-400 hover:text-blue-600"><Edit2 size={16}/></button>
                       )}
                       <button onClick={()=>handleDelete(t.id)} className="text-gray-300 hover:text-red-500"><Trash2 size={16}/></button>
@@ -696,14 +1786,82 @@ const TransactionView = ({ transactions, categories, wallets, userId, appId, fmt
             </tbody>
           </table>
         </div>
+
+        {/* Mobile cards */}
+        <div className="md:hidden divide-y divide-gray-100 dark:divide-gray-700">
+          {filteredTransactions.length===0 ? (
+            <div className="p-8 text-center text-gray-400 dark:text-gray-500">Belum ada data</div>
+          ) : filteredTransactions.map(t => {
+            const w = wallets.find(x => x.id === t.walletId);
+            const wSource = wallets.find(x => x.id === t.sourceWalletId);
+            const wTarget = wallets.find(x => x.id === t.targetWalletId);
+
+            return (
+              <div key={t.id} className="p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(t.date)}</p>
+                    <div className="mt-1 text-sm text-gray-700 dark:text-gray-200 font-medium">
+                      {t.type === 'transfer' ? (
+                        <div className="flex items-center gap-1 text-xs">
+                          <span className="text-gray-500">{wSource?.icon} {wSource?.name || '?'}</span>
+                          <ArrowRightLeft size={10} />
+                          <span className="text-gray-900 dark:text-white font-bold">{wTarget?.icon} {wTarget?.name || '?'}</span>
+                        </div>
+                      ) : t.type === 'investment' ? (
+                        <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1"><Briefcase size={12}/> Investasi</span>
+                      ) : (
+                        w ? <span>{w.icon} {w.name}</span> : <span className="text-gray-400 italic">Terhapus</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className={`text-sm font-bold whitespace-nowrap ${t.type==='income'?'text-green-600 dark:text-green-400': t.type === 'expense' || t.type === 'investment' ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`}>
+                    {t.type==='income' ? '+' : (t.type === 'expense' || t.type === 'investment') ? '-' : ''}{fmt(t.amount)}
+                  </div>
+                </div>
+
+                <div className="flex items-center flex-wrap gap-2">
+                  {t.type === 'transfer' ? (
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Mutasi Saldo</span>
+                  ) : t.type === 'investment' ? (
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Beli Aset</span>
+                  ) : (
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${t.type==='income'?'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400':'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{t.category}</span>
+                  )}
+                  {t.subscriptionId && (
+                    <span title="Auto-generated"><Bot size={12} className="text-purple-500"/></span>
+                  )}
+                  {t.quickAddSource && (
+                    <span title="Ditambahkan via Quick Add AI Scanner"><ScanLine size={12} className="text-emerald-500"/></span>
+                  )}
+                </div>
+
+                <p className="text-sm text-gray-600 dark:text-gray-400 break-words">{t.note||'-'}</p>
+
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  {t.type !== 'investment' && (
+                    <button onClick={()=>handleEdit(t)} className="min-h-[40px] px-3 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-1">
+                      <Edit2 size={14}/> Edit
+                    </button>
+                  )}
+                  <button onClick={()=>handleDelete(t.id)} className="min-h-[40px] px-3 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-1">
+                    <Trash2 size={14}/> Hapus
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   );
 };
 
-const WalletView = ({ wallets, userId, appId, fmt, privacyMode }) => {
+const WalletView = ({ wallets, transactions, userId, appId, fmt, privacyMode }) => {
   const [form, setForm] = useState({ id: null, name: '', type: 'bank', initialBalance: '', limit: '', icon: '' });
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [selectedWallet, setSelectedWallet] = useState(null);
+  const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -736,6 +1894,23 @@ const WalletView = ({ wallets, userId, appId, fmt, privacyMode }) => {
     if(confirm('Hapus akun ini? Transaksi terkait akan tetap ada tapi tanpa nama akun.')) {
       await deleteDoc(doc(db, 'artifacts', appId, 'users', userId, 'wallets', id));
     }
+  };
+
+  const handleWalletClick = (wallet) => {
+    setSelectedWallet(wallet);
+    setIsTransactionModalOpen(true);
+  };
+
+  const getWalletTransactions = () => {
+    if (!selectedWallet || !transactions) return [];
+    
+    return transactions.filter(t => {
+      // Filter transactions related to this wallet
+      if (t.walletId === selectedWallet.id) return true;
+      if (t.sourceWalletId === selectedWallet.id) return true;
+      if (t.targetWalletId === selectedWallet.id) return true;
+      return false;
+    }).sort((a, b) => new Date(b.date) - new Date(a.date));
   };
 
   return (
@@ -781,7 +1956,7 @@ const WalletView = ({ wallets, userId, appId, fmt, privacyMode }) => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {wallets.map(w => (
-          <div key={w.id} className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-between transition-colors duration-300 group relative">
+          <div key={w.id} className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-between transition-colors duration-300 group relative cursor-pointer hover:shadow-md hover:scale-[1.01] transition-all" onClick={() => handleWalletClick(w)}>
              <div className="flex justify-between items-start">
                <div className="flex items-center gap-3">
                  <div className="text-3xl p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -799,8 +1974,8 @@ const WalletView = ({ wallets, userId, appId, fmt, privacyMode }) => {
                  </div>
                </div>
                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity absolute right-4 top-4 bg-white dark:bg-gray-800 p-1 rounded-lg shadow-sm">
-                  <button onClick={()=>handleEdit(w)} className="text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 p-1 rounded"><Edit2 size={16}/></button>
-                  <button onClick={()=>handleDelete(w.id)} className="text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 p-1 rounded"><Trash2 size={16}/></button>
+                  <button onClick={(e)=>{e.stopPropagation();handleEdit(w)}} className="text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 p-1 rounded"><Edit2 size={16}/></button>
+                  <button onClick={(e)=>{e.stopPropagation();handleDelete(w.id)}} className="text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 p-1 rounded"><Trash2 size={16}/></button>
                </div>
              </div>
              <div className="mt-4 pt-4 border-t border-dashed dark:border-gray-700">
@@ -828,6 +2003,107 @@ const WalletView = ({ wallets, userId, appId, fmt, privacyMode }) => {
           </div>
         ))}
       </div>
+
+      {/* Transaction List Modal */}
+      {isTransactionModalOpen && selectedWallet && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in" onClick={() => setIsTransactionModalOpen(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-6 text-white">
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-3">
+                  <div className="text-4xl p-3 bg-white/20 rounded-xl">
+                    {selectedWallet.icon || (
+                      selectedWallet.type === 'bank' ? <Landmark size={28}/> :
+                      selectedWallet.type === 'ewallet' ? <Smartphone size={28}/> :
+                      selectedWallet.type === 'cash' ? <Banknote size={28}/> :
+                      selectedWallet.type === 'credit_card' ? <CreditCard size={28}/> :
+                      <Briefcase size={28}/>
+                    )}
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">{selectedWallet.name}</h2>
+                    <p className="text-emerald-100 text-sm uppercase tracking-wider">{selectedWallet.type.replace('_', ' ')}</p>
+                  </div>
+                </div>
+                <button onClick={() => setIsTransactionModalOpen(false)} className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors">
+                  <X size={24}/>
+                </button>
+              </div>
+              <div className="mt-4 flex items-baseline gap-2">
+                <span className="text-emerald-100 text-sm">{selectedWallet.type === 'credit_card' ? 'Total Tagihan' : 'Saldo Saat Ini'}:</span>
+                <span className="text-3xl font-bold">{selectedWallet.type === 'credit_card' ? fmt(Math.abs(selectedWallet.currentBalance)) : fmt(selectedWallet.currentBalance)}</span>
+              </div>
+            </div>
+
+            {/* Transaction List */}
+            <div className="p-6 overflow-y-auto" style={{maxHeight: 'calc(85vh - 180px)'}}>
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
+                <TrendingUp size={20} className="text-emerald-600"/>
+                Riwayat Transaksi ({getWalletTransactions().length})
+              </h3>
+              
+              {getWalletTransactions().length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-gray-400 mb-2">
+                    <TrendingUp size={48} className="mx-auto opacity-30"/>
+                  </div>
+                  <p className="text-gray-500 dark:text-gray-400">Belum ada transaksi untuk akun ini</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <th className="text-left py-3 px-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tanggal</th>
+                        <th className="text-left py-3 px-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Kategori</th>
+                        <th className="text-left py-3 px-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Catatan</th>
+                        <th className="text-right py-3 px-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Jumlah</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {getWalletTransactions().map((t, idx) => {
+                        const isIncome = t.type === 'income';
+                        const isExpense = t.type === 'expense';
+                        const isTransfer = t.type === 'transfer';
+                        const isTransferOut = isTransfer && t.sourceWalletId === selectedWallet.id;
+                        const isTransferIn = isTransfer && t.targetWalletId === selectedWallet.id;
+                        
+                        return (
+                          <tr key={t.id || idx} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                            <td className="py-3 px-2 text-sm text-gray-600 dark:text-gray-300">
+                              {new Date(t.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </td>
+                            <td className="py-3 px-2">
+                              <span className="text-xs font-semibold px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                                {isTransfer ? (isTransferOut ? 'Transfer Keluar' : 'Transfer Masuk') : (t.category || 'Lainnya')}
+                              </span>
+                            </td>
+                            <td className="py-3 px-2 text-sm text-gray-800 dark:text-gray-200">
+                              {t.note || '-'}
+                            </td>
+                            <td className="py-3 px-2 text-right">
+                              <span className={`font-bold text-sm ${
+                                isIncome || isTransferIn ? 'text-emerald-600 dark:text-emerald-400' :
+                                isExpense || isTransferOut ? 'text-red-600 dark:text-red-400' :
+                                'text-gray-600 dark:text-gray-400'
+                              }`}>
+                                {(isIncome || isTransferIn) && '+'}
+                                {(isExpense || isTransferOut) && '-'}
+                                {fmt(t.amount)}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1673,18 +2949,29 @@ const CategoryView = ({ categories, userId, appId, fmt }) => {
 };
 
 const SalaryAllocatorView = ({ categories, wallets, userId, appId, fmt }) => {
-  const [salary, setSalary] = useState('');
+  const [salaries, setSalaries] = useState([{ id: Date.now(), source: '', amount: '' }]);
   const [allocations, setAllocations] = useState([]);
   const [selectedWallet, setSelectedWallet] = useState('');
   const [savedTemplates, setSavedTemplates] = useState([]);
+
+  // Calculate total salary from all sources
+  const totalSalary = useMemo(() => {
+    return salaries.reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0);
+  }, [salaries]);
 
   // Load state from localStorage
   useEffect(() => {
     const savedState = localStorage.getItem(`salaryState_${userId}`);
     if (savedState) {
       try {
-        const { salary: s, selectedWallet: w, allocations: a } = JSON.parse(savedState);
-        setSalary(s || '');
+        const { salaries: sal, selectedWallet: w, allocations: a } = JSON.parse(savedState);
+        // Backward compatibility: convert old single salary to array
+        if (sal && Array.isArray(sal)) {
+          setSalaries(sal.length > 0 ? sal : [{ id: Date.now(), source: '', amount: '' }]);
+        } else if (savedState.salary) {
+          // Old format
+          setSalaries([{ id: Date.now(), source: 'Gaji Utama', amount: savedState.salary }]);
+        }
         setSelectedWallet(w || '');
         setAllocations(a || []);
       } catch (e) {
@@ -1706,18 +2993,35 @@ const SalaryAllocatorView = ({ categories, wallets, userId, appId, fmt }) => {
   // Auto-save state to localStorage whenever it changes
   useEffect(() => {
     if (userId) {
-      const state = { salary, selectedWallet, allocations };
+      const state = { salaries, selectedWallet, allocations };
       localStorage.setItem(`salaryState_${userId}`, JSON.stringify(state));
     }
-  }, [salary, selectedWallet, allocations, userId]);
+  }, [salaries, selectedWallet, allocations, userId]);
 
   // Save allocations helper
   const saveAllocations = (data) => {
     setAllocations(data);
   };
 
+  // Salary sources management
+  const handleAddSalarySource = () => {
+    setSalaries([...salaries, { id: Date.now(), source: '', amount: '' }]);
+  };
+
+  const handleUpdateSalarySource = (id, field, value) => {
+    setSalaries(salaries.map(s => s.id === id ? { ...s, [field]: value } : s));
+  };
+
+  const handleDeleteSalarySource = (id) => {
+    if (salaries.length === 1) {
+      alert('Minimal harus ada 1 sumber gaji');
+      return;
+    }
+    setSalaries(salaries.filter(s => s.id !== id));
+  };
+
   const handleAddAllocation = () => {
-    if (!salary || !selectedWallet) {
+    if (totalSalary === 0 || !selectedWallet) {
       alert('Masukkan gaji dan pilih rekening terlebih dahulu');
       return;
     }
@@ -1739,16 +3043,16 @@ const SalaryAllocatorView = ({ categories, wallets, userId, appId, fmt }) => {
         if (field === 'amount') {
           newA.amount = value;
           // Auto calculate percentage if amount changes and salary is set
-          if (salary && value !== '') {
-            newA.percentage = ((parseFloat(value) || 0) / parseFloat(salary)) * 100;
+          if (totalSalary && value !== '') {
+            newA.percentage = ((parseFloat(value) || 0) / totalSalary) * 100;
           } else {
             newA.percentage = 0;
           }
         } else if (field === 'percentage') {
           newA.percentage = parseFloat(value) || 0;
           // Auto calculate amount if percentage changes and salary is set
-          if (salary) {
-            newA.amount = ((parseFloat(value) || 0) / 100 * parseFloat(salary)).toString();
+          if (totalSalary) {
+            newA.amount = ((parseFloat(value) || 0) / 100 * totalSalary).toString();
           } else {
             newA.amount = '';
           }
@@ -1770,14 +3074,14 @@ const SalaryAllocatorView = ({ categories, wallets, userId, appId, fmt }) => {
 
   const handleReset = () => {
     if (confirm('Reset semua alokasi? Data akan dihapus.')) {
-      setSalary('');
+      setSalaries([{ id: Date.now(), source: '', amount: '' }]);
       setSelectedWallet('');
       setAllocations([]);
     }
   };
 
   const handleSaveTemplate = () => {
-    if (!salary || allocations.length === 0) {
+    if (totalSalary === 0 || allocations.length === 0) {
       alert('Masukkan gaji dan minimal 1 alokasi terlebih dahulu');
       return;
     }
@@ -1787,7 +3091,7 @@ const SalaryAllocatorView = ({ categories, wallets, userId, appId, fmt }) => {
     const template = {
       id: Date.now(),
       name,
-      salary,
+      salaries,
       selectedWallet,
       allocations,
       createdAt: new Date().toISOString()
@@ -1801,7 +3105,12 @@ const SalaryAllocatorView = ({ categories, wallets, userId, appId, fmt }) => {
 
   const handleLoadTemplate = (template) => {
     if (confirm(`Load template "${template.name}"?`)) {
-      setSalary(template.salary);
+      // Backward compatibility
+      if (template.salaries && Array.isArray(template.salaries)) {
+        setSalaries(template.salaries.map(s => ({ ...s, id: Date.now() + Math.random() })));
+      } else if (template.salary) {
+        setSalaries([{ id: Date.now(), source: 'Gaji Utama', amount: template.salary }]);
+      }
       setSelectedWallet(template.selectedWallet);
       setAllocations(template.allocations.map(a => ({ ...a, id: Date.now() + Math.random() })));
     }
@@ -1849,8 +3158,8 @@ const SalaryAllocatorView = ({ categories, wallets, userId, appId, fmt }) => {
   };
 
   const totalAllocated = allocations.reduce((sum, a) => sum + (parseFloat(a.amount) || 0), 0);
-  const remaining = (parseFloat(salary) || 0) - totalAllocated;
-  const remainingPercent = salary ? (remaining / parseFloat(salary)) * 100 : 0;
+  const remaining = totalSalary - totalAllocated;
+  const remainingPercent = totalSalary ? (remaining / totalSalary) * 100 : 0;
 
   return (
     <div className="space-y-6">
@@ -1869,7 +3178,7 @@ const SalaryAllocatorView = ({ categories, wallets, userId, appId, fmt }) => {
           </button>
           <button 
             onClick={handleSaveTemplate} 
-            disabled={!salary || allocations.length === 0}
+            disabled={totalSalary === 0 || allocations.length === 0}
             className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex gap-2 items-center transition-colors"
           >
             <Save size={16}/> Simpan Template
@@ -1896,7 +3205,12 @@ const SalaryAllocatorView = ({ categories, wallets, userId, appId, fmt }) => {
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex-1">
                     <h4 className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{template.name}</h4>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{fmt(template.salary)}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {template.salaries ? 
+                        fmt(template.salaries.reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0)) : 
+                        fmt(template.salary || 0)
+                      }
+                    </p>
                     <p className="text-xs text-gray-400 dark:text-gray-500">{template.allocations.length} alokasi</p>
                   </div>
                   <button 
@@ -1921,46 +3235,80 @@ const SalaryAllocatorView = ({ categories, wallets, userId, appId, fmt }) => {
       {/* Salary Input */}
       <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-colors duration-300">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="font-semibold text-gray-700 dark:text-gray-200">Input Data Gaji</h3>
-          <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-            <CheckCircle size={14}/> Auto-save aktif
-          </span>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Total Gaji (Rp)</label>
-            <input 
-              type="number" 
-              value={salary} 
-              onChange={(e) => setSalary(e.target.value)} 
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white dark:bg-gray-700 dark:text-white text-lg font-bold"
-              placeholder="Masukkan total gaji"
-            />
+          <h3 className="font-semibold text-gray-700 dark:text-gray-200">Sumber Gaji</h3>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+              <CheckCircle size={14}/> Auto-save aktif
+            </span>
+            <button
+              onClick={handleAddSalarySource}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex gap-1 items-center transition-colors"
+            >
+              <Plus size={14}/> Tambah Sumber
+            </button>
           </div>
+        </div>
+
+        <div className="space-y-3 mb-4">
+          {salaries.map((sal, index) => (
+            <div key={sal.id} className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400">Sumber Gaji #{index + 1}</label>
+                <input
+                  type="text"
+                  value={sal.source}
+                  onChange={(e) => handleUpdateSalarySource(sal.id, 'source', e.target.value)}
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white dark:bg-gray-800 dark:text-white text-sm"
+                  placeholder="Contoh: Gaji Utama, Bonus"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400">Nominal (Rp)</label>
+                <input
+                  type="number"
+                  value={sal.amount}
+                  onChange={(e) => handleUpdateSalarySource(sal.id, 'amount', e.target.value)}
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white dark:bg-gray-800 dark:text-white text-sm font-semibold"
+                  placeholder="0"
+                  min="0"
+                />
+              </div>
+              <div className="flex items-end">
+                <button
+                  onClick={() => handleDeleteSalarySource(sal.id)}
+                  disabled={salaries.length === 1}
+                  className="w-full p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-sm font-medium"
+                >
+                  <Trash2 size={16} className="inline mr-1"/> Hapus
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t dark:border-gray-700">
           <div className="space-y-2">
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Rekening Default</label>
-            <select 
-              value={selectedWallet} 
-              onChange={(e) => setSelectedWallet(e.target.value)} 
+            <select
+              value={selectedWallet}
+              onChange={(e) => setSelectedWallet(e.target.value)}
               className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white dark:bg-gray-700 dark:text-white dark:[&>option]:bg-gray-800"
             >
               <option value="">Pilih Rekening...</option>
               {wallets.map(w => <option key={w.id} value={w.id}>{w.icon} {w.name}</option>)}
             </select>
           </div>
-        </div>
-
-        {salary && (
-          <div className="mt-6 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
-            <p className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">
-              Total Gaji: <span className="font-bold text-lg">{fmt(salary)}</span>
-            </p>
+          <div className="flex items-end">
+            <div className="w-full p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mb-1">TOTAL GAJI</p>
+              <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">{fmt(totalSalary)}</p>
+            </div>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Allocations Summary */}
-      {salary && (
+      {totalSalary > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
             <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">TOTAL DIALOKASIKAN</p>
@@ -1994,7 +3342,7 @@ const SalaryAllocatorView = ({ categories, wallets, userId, appId, fmt }) => {
             </h3>
             <button 
               onClick={handleAddAllocation} 
-              disabled={!salary || !selectedWallet}
+              disabled={totalSalary === 0 || !selectedWallet}
               className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex gap-2 items-center transition-colors"
             >
               <Plus size={16}/> Tambah Alokasi
@@ -2144,15 +3492,15 @@ const SalaryAllocatorView = ({ categories, wallets, userId, appId, fmt }) => {
             <div className="space-y-3 text-sm">
               <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-100 dark:border-amber-800">
                 <p className="font-semibold text-amber-900 dark:text-amber-300">Kebutuhan Primer (60%)</p>
-                <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">{fmt((parseFloat(salary) || 0) * 0.6)}</p>
+                <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">{fmt(totalSalary * 0.6)}</p>
               </div>
               <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
                 <p className="font-semibold text-blue-900 dark:text-blue-300">Kebutuhan Sekunder (30%)</p>
-                <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">{fmt((parseFloat(salary) || 0) * 0.3)}</p>
+                <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">{fmt(totalSalary * 0.3)}</p>
               </div>
               <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800">
                 <p className="font-semibold text-purple-900 dark:text-purple-300">Investasi & Tabungan (10%)</p>
-                <p className="text-xs text-purple-700 dark:text-purple-400 mt-1">{fmt((parseFloat(salary) || 0) * 0.1)}</p>
+                <p className="text-xs text-purple-700 dark:text-purple-400 mt-1">{fmt(totalSalary * 0.1)}</p>
               </div>
             </div>
             <div className="space-y-2 mt-4 text-xs text-gray-500 dark:text-gray-400">
@@ -2167,7 +3515,1625 @@ const SalaryAllocatorView = ({ categories, wallets, userId, appId, fmt }) => {
   );
 };
 
-// --- 6. MAIN APP (Defined Last) ---
+// --- 5. EDUCATION FUND PLANNER VIEW ---
+const EducationFundView = ({ userId, appId, fmt }) => {
+  const [children, setChildren] = useState([]);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    id: null,
+    name: '',
+    birthYear: new Date().getFullYear(),
+    currentAge: 0,
+    currentSavings: 0
+  });
+
+  // Educational level cost structure
+  const educationLevels = [
+    { level: 'TK', startAge: 4, duration: 2, estimatedCost: 5000000, icon: '🎨' },
+    { level: 'SD', startAge: 6, duration: 6, estimatedCost: 15000000, icon: '📚' },
+    { level: 'SMP', startAge: 12, duration: 3, estimatedCost: 25000000, icon: '📖' },
+    { level: 'SMA', startAge: 15, duration: 3, estimatedCost: 35000000, icon: '🎓' },
+    { level: 'Kuliah', startAge: 18, duration: 4, estimatedCost: 150000000, icon: '🎯' }
+  ];
+
+  const EDUCATION_INFLATION = 0.12; // 12% per year
+
+  // Load children data from Firestore
+  useEffect(() => {
+    if (!userId) return;
+
+    const unsubscribe = onSnapshot(
+      query(collection(db, 'artifacts', appId, 'users', userId, 'children')),
+      (snapshot) => {
+        const data = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          birthYear: doc.data().birthYear || new Date().getFullYear()
+        }));
+        setChildren(data);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [userId, appId]);
+
+  // Calculate future cost with inflation
+  const calculateFutureCost = (baseCost, yearsFromNow) => {
+    return baseCost * Math.pow(1 + EDUCATION_INFLATION, yearsFromNow);
+  };
+
+  // Calculate monthly savings needed
+  const calculateMonthlySavings = (targetAmount, currentSavings, monthsUntil) => {
+    if (monthsUntil <= 0) return 0;
+    return (targetAmount - currentSavings) / monthsUntil;
+  };
+
+  // Generate education plan for a child
+  const generateEducationPlan = (child) => {
+    const currentYear = new Date().getFullYear();
+    const currentAge = currentYear - child.birthYear;
+
+    return educationLevels.map(level => {
+      const yearsUntil = level.startAge - currentAge;
+      const startYear = currentYear + yearsUntil;
+      const futureCost = calculateFutureCost(level.estimatedCost, yearsUntil);
+      const monthsUntil = yearsUntil * 12;
+      const monthlySavings = calculateMonthlySavings(futureCost, child.currentSavings || 0, monthsUntil);
+
+      return {
+        ...level,
+        yearsUntil,
+        startYear,
+        futureCost,
+        monthlySavings: monthlySavings > 0 ? monthlySavings : 0,
+        status: yearsUntil > 0 ? 'upcoming' : yearsUntil >= -level.duration ? 'ongoing' : 'completed'
+      };
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!formData.name) {
+      alert('Nama anak harus diisi');
+      return;
+    }
+
+    try {
+      const payload = {
+        name: formData.name,
+        birthYear: Number(formData.birthYear),
+        currentSavings: Number(formData.currentSavings) || 0,
+        updatedAt: serverTimestamp()
+      };
+
+      if (formData.id) {
+        await updateDoc(doc(db, 'artifacts', appId, 'users', userId, 'children', formData.id), payload);
+      } else {
+        await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'children'), {
+          ...payload,
+          createdAt: serverTimestamp()
+        });
+      }
+
+      setIsFormOpen(false);
+      setFormData({ id: null, name: '', birthYear: new Date().getFullYear(), currentAge: 0, currentSavings: 0 });
+    } catch (error) {
+      console.error('Error saving child data:', error);
+      alert('Gagal menyimpan data');
+    }
+  };
+
+  const handleEdit = (child) => {
+    setFormData({
+      id: child.id,
+      name: child.name,
+      birthYear: child.birthYear,
+      currentAge: new Date().getFullYear() - child.birthYear,
+      currentSavings: child.currentSavings || 0
+    });
+    setIsFormOpen(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (confirm('Hapus data anak ini?')) {
+      try {
+        await deleteDoc(doc(db, 'artifacts', appId, 'users', userId, 'children', id));
+      } catch (error) {
+        console.error('Error deleting child:', error);
+        alert('Gagal menghapus data');
+      }
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+            <GraduationCap size={28} className="text-emerald-600" />
+            Dana Pendidikan Anak
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Rencanakan biaya pendidikan anak dengan inflasi 12% per tahun
+          </p>
+        </div>
+        <button
+          onClick={() => {
+            setIsFormOpen(!isFormOpen);
+            setFormData({ id: null, name: '', birthYear: new Date().getFullYear(), currentAge: 0, currentSavings: 0 });
+          }}
+          className="bg-emerald-600 text-white px-4 py-2 rounded-lg flex gap-2 hover:bg-emerald-700 transition-colors"
+        >
+          {isFormOpen ? <X size={18} /> : <Plus size={18} />}
+          <span>{isFormOpen ? 'Batal' : 'Tambah Anak'}</span>
+        </button>
+      </div>
+
+      {/* Form Input */}
+      {isFormOpen && (
+        <form
+          onSubmit={handleSubmit}
+          className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border border-emerald-100 dark:border-gray-700"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Nama Anak
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 dark:text-white"
+                placeholder="Contoh: Ahmad"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Tahun Lahir
+              </label>
+              <input
+                type="number"
+                required
+                min="2000"
+                max={new Date().getFullYear()}
+                value={formData.birthYear}
+                onChange={(e) => setFormData({ ...formData, birthYear: e.target.value })}
+                className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Tabungan Saat Ini (Rp)
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={formData.currentSavings}
+                onChange={(e) => setFormData({ ...formData, currentSavings: e.target.value })}
+                className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 dark:text-white"
+                placeholder="0"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end mt-4">
+            <button
+              type="submit"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-lg font-medium flex items-center gap-2"
+            >
+              <Save size={18} />
+              {formData.id ? 'Update' : 'Simpan'}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Children List */}
+      {children.length === 0 ? (
+        <div className="bg-white dark:bg-gray-800 p-12 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 text-center">
+          <Baby size={48} className="mx-auto text-gray-400 mb-4" />
+          <p className="text-gray-500 dark:text-gray-400">
+            Belum ada data anak. Tambahkan data anak untuk mulai merencanakan dana pendidikan.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {children.map((child) => {
+            const currentAge = new Date().getFullYear() - child.birthYear;
+            const educationPlan = generateEducationPlan(child);
+            const upcomingLevels = educationPlan.filter(p => p.status === 'upcoming');
+            const nextLevel = upcomingLevels[0];
+
+            return (
+              <div
+                key={child.id}
+                className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden"
+              >
+                {/* Child Header */}
+                <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-6 text-white">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="text-2xl font-bold flex items-center gap-2">
+                        <Baby size={24} />
+                        {child.name}
+                      </h3>
+                      <p className="text-emerald-100 mt-1">
+                        {currentAge} tahun • Lahir {child.birthYear}
+                      </p>
+                      <div className="mt-3 bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2 inline-block">
+                        <p className="text-sm">Tabungan Saat Ini</p>
+                        <p className="text-xl font-bold">{fmt(child.currentSavings || 0)}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEdit(child)}
+                        className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(child.id)}
+                        className="p-2 bg-white/20 hover:bg-red-500 rounded-lg transition-colors"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Next Milestone */}
+                {nextLevel && (
+                  <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-800 p-6">
+                    <h4 className="text-sm font-semibold text-amber-900 dark:text-amber-300 mb-3 flex items-center gap-2">
+                      <Target size={16} />
+                      Target Berikutnya
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div>
+                        <p className="text-xs text-amber-700 dark:text-amber-400">Jenjang</p>
+                        <p className="text-lg font-bold text-amber-900 dark:text-amber-200">
+                          {nextLevel.icon} {nextLevel.level}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-amber-700 dark:text-amber-400">Tahun Masuk</p>
+                        <p className="text-lg font-bold text-amber-900 dark:text-amber-200">
+                          {nextLevel.startYear}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-amber-700 dark:text-amber-400">Estimasi Biaya</p>
+                        <p className="text-lg font-bold text-amber-900 dark:text-amber-200">
+                          {fmt(nextLevel.futureCost)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-amber-700 dark:text-amber-400">Nabung per Bulan</p>
+                        <p className="text-lg font-bold text-amber-900 dark:text-amber-200">
+                          {fmt(nextLevel.monthlySavings)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Education Timeline */}
+                <div className="p-6">
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+                    <School size={16} />
+                    Rencana Pendidikan Lengkap
+                  </h4>
+                  <div className="space-y-3">
+                    {educationPlan.map((level, idx) => {
+                      const progress = level.status === 'completed' ? 100 :
+                                     level.status === 'ongoing' ? 50 : 0;
+
+                      return (
+                        <div
+                          key={idx}
+                          className={`p-4 rounded-lg border ${
+                            level.status === 'upcoming'
+                              ? 'bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800'
+                              : level.status === 'ongoing'
+                              ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'
+                              : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <p className="font-bold text-gray-800 dark:text-gray-100">
+                                {level.icon} {level.level}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {level.yearsUntil > 0
+                                  ? `${level.yearsUntil} tahun lagi • ${level.startYear}`
+                                  : level.status === 'ongoing'
+                                  ? 'Sedang Berjalan'
+                                  : 'Sudah Selesai'}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-bold text-gray-800 dark:text-gray-100">
+                                {fmt(level.futureCost)}
+                              </p>
+                              {level.monthlySavings > 0 && (
+                                <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                                  {fmt(level.monthlySavings)}/bln
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Progress Bar */}
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div
+                              className={`h-2 rounded-full transition-all ${
+                                level.status === 'completed'
+                                  ? 'bg-gray-400'
+                                  : level.status === 'ongoing'
+                                  ? 'bg-green-500'
+                                  : 'bg-blue-500'
+                              }`}
+                              style={{ width: `${progress}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Total Summary */}
+                  <div className="mt-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-purple-700 dark:text-purple-400">Total Biaya hingga Kuliah</p>
+                        <p className="text-xl font-bold text-purple-900 dark:text-purple-200">
+                          {fmt(educationPlan.reduce((sum, level) => sum + level.futureCost, 0))}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-purple-700 dark:text-purple-400">Rekomendasi Nabung/Bulan</p>
+                        <p className="text-xl font-bold text-purple-900 dark:text-purple-200">
+                          {fmt(nextLevel ? nextLevel.monthlySavings : 0)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Info Panel */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-xl border border-blue-200 dark:border-blue-800">
+        <h4 className="font-bold text-blue-900 dark:text-blue-300 mb-3 flex items-center gap-2">
+          <AlertTriangle size={18} />
+          Tentang Perhitungan
+        </h4>
+        <div className="space-y-2 text-sm text-blue-800 dark:text-blue-300">
+          <p>📈 <strong>Inflasi Pendidikan:</strong> 12% per tahun (rata-rata Indonesia)</p>
+          <p>💰 <strong>Estimasi Biaya:</strong> Berdasarkan biaya rata-rata sekolah swasta menengah</p>
+          <p>🎯 <strong>Rekomendasi:</strong> Mulai menabung sedini mungkin untuk meringankan beban</p>
+          <p>📊 <strong>Tips:</strong> Diversifikasi investasi (deposito, reksadana, emas) untuk hasil maksimal</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- 6. SALARY SLIP ARCHIVE VIEW ---
+const SalarySlipArchiveView = ({ userId, appId, fmt }) => {
+  const [salarySlips, setSalarySlips] = useState([]);
+  const [isUploadingPDF, setIsUploadingPDF] = useState(false);
+  const [selectedSlip, setSelectedSlip] = useState(null);
+
+  // Load salary slips from Firestore
+  useEffect(() => {
+    if (!userId) return;
+
+    const unsubscribe = onSnapshot(
+      collection(db, 'artifacts', appId, 'users', userId, 'salarySlips'),
+      (snapshot) => {
+        const data = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        .sort((a, b) => {
+          // Sort by year desc, then month desc
+          if (b.year !== a.year) return b.year - a.year;
+          return b.month - a.month;
+        });
+        console.log('✅ Loaded salary slips:', data.length, 'items', data);
+        setSalarySlips(data);
+      },
+      (error) => {
+        console.error('❌ Error loading salary slips:', error);
+        alert('Error loading data: ' + error.message);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [userId, appId]);
+
+  const extractTextFromPDF = async (file) => {
+    const pdfjsLib = await import('pdfjs-dist');
+    const workerModule = await import('pdfjs-dist/build/pdf.worker.min.mjs?url');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default;
+
+    const buffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+
+    const pageTexts = [];
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items
+        .map(item => (typeof item.str === 'string' ? item.str : ''))
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      if (pageText) {
+        pageTexts.push(pageText);
+      }
+    }
+
+    return pageTexts.join('\n');
+  };
+
+  // Parse PDF salary slip (without storing file)
+  const handlePDFUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || file.type !== 'application/pdf') {
+      alert('Mohon pilih file PDF');
+      return;
+    }
+
+    setIsUploadingPDF(true);
+
+    try {
+      const text = await extractTextFromPDF(file);
+      console.log('📄 PDF text extracted:', (text || '').substring(0, 300) + '...');
+
+      if (!text || text.length < 30) {
+        throw new Error('Teks PDF tidak terbaca. Pastikan file PDF bukan hasil scan gambar murni atau gunakan PDF yang memiliki teks.');
+      }
+
+      // Parse salary slip data
+      const parsedData = parseSalarySlip(text);
+      console.log('🔍 Parsed data:', parsedData);
+
+      // Save only parsed data to Firestore (no PDF file)
+      const docRef = await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'salarySlips'), {
+        fileName: file.name,
+        month: parsedData.month || new Date().getMonth() + 1,
+        year: parsedData.year || new Date().getFullYear(),
+        items: parsedData.items,
+        breakdown: parsedData.breakdown || null,
+        grossAmount: parsedData.grossAmount || 0,
+        deductionAmount: parsedData.deductionAmount || 0,
+        netAmount: parsedData.netAmount || parsedData.totalAmount,
+        totalAmount: parsedData.totalAmount,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+
+      console.log('✅ Saved to Firestore with ID:', docRef.id);
+
+      alert('✅ Slip gaji berhasil dianalisis dan disimpan!');
+      e.target.value = ''; // Reset input
+    } catch (error) {
+      console.error('Error processing salary slip PDF:', error);
+      alert(`Gagal menganalisis slip gaji: ${error.message}`);
+    } finally {
+      setIsUploadingPDF(false);
+    }
+  };
+
+  // Parse salary slip text - Enhanced for ITB format
+  const parseSalarySlip = (text) => {
+    let items = [];
+    let totalAmount = 0;
+    let month = null;
+    let year = null;
+
+    console.log('🔍 Parsing salary slip text...');
+
+    const normalizeLabel = (s = '') => s.toLowerCase().replace(/\s+/g, ' ').trim();
+    const parseIDR = (raw) => {
+      if (!raw) return 0;
+      let s = String(raw)
+        .replace(/rp|idr/gi, '')
+        .replace(/[Oo]/g, '0')
+        .replace(/[Il]/g, '1')
+        .replace(/\s+/g, '')
+        .trim();
+
+      // Keep only numeric separators
+      s = s.replace(/[^\d.,-]/g, '');
+
+      // Common Indonesian format: 17.198.370,00
+      if (s.includes('.') && s.includes(',')) {
+        s = s.split(',')[0].replace(/\./g, '');
+      } else if (s.includes(',') && !s.includes('.')) {
+        // Could be 17198370,00 or 17,198,370
+        const parts = s.split(',');
+        s = parts.length > 2 ? parts.join('') : parts[0];
+      } else {
+        s = s.replace(/\./g, '');
+      }
+
+      const n = parseInt(s, 10);
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    const findAmountByLabel = (sourceText, labelRegex) => {
+      // Label and amount usually appear close in same visual row; allow line breaks in OCR output.
+      const re = new RegExp(`${labelRegex}(?:[\\s\\S]{0,90}?)(?:Rp|IDR)?\\s*([\\dIlOo][\\dIlOo.,]{1,24})`, 'i');
+      const match = sourceText.match(re);
+      return match ? parseIDR(match[1]) : 0;
+    };
+
+    // Extract month and year
+    const monthNames = {
+      'januari': 1, 'februari': 2, 'maret': 3, 'april': 4,
+      'mei': 5, 'juni': 6, 'juli': 7, 'agustus': 8,
+      'september': 9, 'oktober': 10, 'november': 11, 'desember': 12
+    };
+
+    const normalizedText = (text || '')
+      .replace(/\r/g, '')
+      .replace(/[“”]/g, '"')
+      .replace(/[–—]/g, '-')
+      .replace(/\t/g, ' ')
+      .replace(/\u00A0/g, ' ');
+
+    const lowerText = normalizedText.toLowerCase();
+
+    // More flexible month/year matching
+    const monthMatch = lowerText.match(/periode[:\s]*(januari|februari|maret|april|mei|juni|juli|agustus|september|oktober|november|desember)\s*(\d{4})/) ||
+                       lowerText.match(/(januari|februari|maret|april|mei|juni|juli|agustus|september|oktober|november|desember)\s*(\d{4})/);
+    if (monthMatch) {
+      month = monthNames[monthMatch[1]];
+      year = parseInt(monthMatch[2]);
+      console.log('📅 Period:', monthMatch[1], year);
+    }
+
+    // ITB fixed-structure breakdown fields
+    const incomeMainDefs = [
+      { name: 'Gaji Pokok', re: 'gaji\\s*pokok' },
+      { name: 'Tunjangan Istri/Suami', re: 'tunjangan\\s*istri\\s*\\/\\s*suami|tunjangan\\s*istri\\s*suami' },
+      { name: 'Tunjangan Anak', re: 'tunjangan\\s*anak' },
+      { name: 'Tunjangan Perbaikan Penghasilan', re: 'tunjangan\\s*perbaikan\\s*penghasilan' },
+      { name: 'Tunjangan Struktural', re: 'tunjangan\\s*struktural' },
+      { name: 'Tunjangan Fungsional', re: 'tunjangan\\s*fungsional' },
+      { name: 'Pembulatan', re: 'pembulatan' },
+      { name: 'Tunjangan Beras', re: 'tunjangan\\s*beras' },
+      { name: 'Tunjangan Pajak Penghasilan Gaji', re: 'tunjangan\\s*pajak\\s*penghasilan\\s*gaji' },
+      { name: 'Tunjangan BPJS Kesehatan', re: 'tunjangan\\s*bpjs\\s*kesehatan' },
+      { name: 'Tunjangan BPJS Ketenagakerjaan', re: 'tunjangan\\s*bpjs\\s*ketenagakerjaan' },
+      { name: 'Tabungan Hari Tua', re: 'tabungan\\s*hari\\s*tua' },
+    ];
+
+    const incomeAdditionalDefs = [
+      { name: 'Tunjangan Jabatan', re: 'tunjangan\\s*jabatan' },
+      { name: 'Tunjangan Kehormatan', re: 'tunjangan\\s*kehormatan' },
+      { name: 'Tunjangan Profesi', re: 'tunjangan\\s*profesi' },
+      { name: 'Tunjangan Kehadiran', re: 'tunjangan\\s*kehadiran' },
+      { name: 'Tunjangan Makan', re: 'tunjangan\\s*makan' },
+      { name: 'Insentif Kinerja', re: 'insentif\\s*kinerja' },
+      { name: 'THR / Gaji Ke-13 Bonus', re: 'thr\\s*\\/\\s*gaji\\s*ke-?13\\s*bonus|gaji\\s*ke-?13\\s*bonus' },
+      { name: 'Tunjangan Penyesuaian', re: 'tunjangan\\s*penyesuaian' },
+      { name: 'Honorarium Beban Lebih (Dosen)', re: 'honorarium\\s*beban\\s*lebih' },
+      { name: 'Honorarium Kegiatan Penelitian/Pengabdian', re: 'honorarium\\s*kegiatan\\s*penelitian|pengabdian\\s*pada\\s*masyarakat' },
+      { name: 'Honorarium Kegiatan Internal', re: 'honorarium\\s*kegiatan\\s*internal' },
+      { name: 'Honorarium Kegiatan Kerjasama', re: 'honorarium\\s*kegiatan\\s*kerjasama|kerja\\s*sama' },
+    ];
+
+    const deductionDefs = [
+      { name: 'DPLK', re: '\\bdplk\\b' },
+      { name: 'Perumahan (BTN)', re: 'perumahan\\s*\\(\\s*btn\\s*\\)|perumahan\\s*btn' },
+      { name: 'BPJS Kesehatan', re: '(?<!tunjangan\\s*)bpjs\\s*kesehatan' },
+      { name: 'BPJS Ketenagakerjaan', re: '(?<!tunjangan\\s*)bpjs\\s*ketenagakerjaan' },
+      { name: 'Lain lain', re: 'lain\\s*lain' },
+      { name: 'Pajak Penghasilan', re: 'pajak\\s*penghasilan' },
+    ];
+
+    const incomeMain = incomeMainDefs.map(d => ({ name: d.name, amount: findAmountByLabel(normalizedText, d.re) }));
+    const incomeAdditional = incomeAdditionalDefs.map(d => ({ name: d.name, amount: findAmountByLabel(normalizedText, d.re) }));
+    const deductions = deductionDefs.map(d => ({ name: d.name, amount: findAmountByLabel(normalizedText, d.re) }));
+
+    const jumlahGajiKotor = findAmountByLabel(normalizedText, 'jumlah\\s*gaji\\s*kotor');
+    const totalPenghasilanKotor = findAmountByLabel(normalizedText, 'total\\s*penghasilan\\s*kotor');
+    const jumlahPotongan = findAmountByLabel(normalizedText, 'jumlah\\s*potongan');
+    const totalPenghasilanBersih = findAmountByLabel(normalizedText, 'total\\s*penghasilan\\s*bersih');
+
+    const calcIncomeMain = incomeMain.reduce((s, x) => s + x.amount, 0);
+    const calcIncomeAdditional = incomeAdditional.reduce((s, x) => s + x.amount, 0);
+    const calcGross = calcIncomeMain + calcIncomeAdditional;
+    const calcDeduction = deductions.reduce((s, x) => s + x.amount, 0);
+    const calcNet = calcGross - calcDeduction;
+
+    const grossAmount = totalPenghasilanKotor || jumlahGajiKotor || calcGross;
+    const deductionAmount = jumlahPotongan || calcDeduction;
+    const netAmount = totalPenghasilanBersih || (grossAmount - deductionAmount) || calcNet;
+    totalAmount = netAmount || grossAmount || calcGross;
+
+    // Backward-compatible summary items (non-zero income components)
+    items = [...incomeMain, ...incomeAdditional].filter(x => x.amount > 0);
+
+    // Fallback when OCR order is very noisy and structured extraction failed
+    if (items.length === 0 && totalAmount === 0) {
+      const lines = normalizedText.split('\n').map(l => l.trim()).filter(Boolean);
+      const fallbackItems = [];
+      for (const line of lines) {
+        const m = line.match(/(.+?)\s+(?:Rp|IDR)?\s*([\dIlOo][\dIlOo.,]{1,24})\s*$/i);
+        if (!m) continue;
+        const label = normalizeLabel(m[1]);
+        const amount = parseIDR(m[2]);
+        if (!amount) continue;
+        if (/total|jumlah|potongan|bersih/.test(label)) continue;
+        if (/gaji|tunjangan|honor|insentif|bonus|lembur|pembulatan|beras/.test(label)) {
+          fallbackItems.push({
+            name: m[1].replace(/\s+/g, ' ').trim(),
+            amount,
+          });
+        }
+      }
+      if (fallbackItems.length) {
+        items = fallbackItems;
+        totalAmount = fallbackItems.reduce((s, x) => s + x.amount, 0);
+      }
+    }
+
+    const breakdown = {
+      incomeMain,
+      incomeAdditional,
+      deductions,
+      totals: {
+        jumlahGajiKotor: jumlahGajiKotor || calcIncomeMain,
+        totalPenghasilanKotor: grossAmount,
+        jumlahPotongan: deductionAmount,
+        totalPenghasilanBersih: netAmount,
+      },
+    };
+
+    console.log('📋 Summary:', {
+      month,
+      year,
+      itemCount: items.length,
+      grossAmount,
+      deductionAmount,
+      netAmount,
+      totalAmount,
+    });
+
+    return { month, year, items, totalAmount, grossAmount, deductionAmount, netAmount, breakdown };
+  };
+
+  const deleteSalarySlip = async (id) => {
+    if (confirm('Hapus arsip slip gaji ini?')) {
+      try {
+        await deleteDoc(doc(db, 'artifacts', appId, 'users', userId, 'salarySlips', id));
+      } catch (error) {
+        console.error('Error deleting slip:', error);
+        alert('Gagal menghapus arsip');
+      }
+    }
+  };
+
+  // Salary slip trend data
+  const salaryTrendData = useMemo(() => {
+    const data = salarySlips
+      .slice(0, 12) // Last 12 months
+      .reverse()
+      .map(slip => ({
+        month: `${['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'][slip.month - 1]} ${slip.year}`,
+        amount: slip.totalAmount || 0,
+        change: 0
+      }));
+    
+    // Calculate month-to-month changes
+    return data.map((item, idx) => {
+      if (idx > 0) {
+        const prev = data[idx - 1].amount;
+        if (prev > 0) {
+          return { ...item, change: ((item.amount - prev) / prev) * 100 };
+        }
+      }
+      return item;
+    });
+  }, [salarySlips]);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+            <ScanLine size={28} className="text-purple-600" />
+            Arsip Slip Gaji
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Upload & tracking slip gaji dengan AI parsing
+          </p>
+        </div>
+        <label className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex gap-2 cursor-pointer transition-colors">
+          {isUploadingPDF ? (
+            <>
+              <RefreshCw size={18} className="animate-spin" />
+              <span>Menganalisis...</span>
+            </>
+          ) : (
+            <>
+              <Plus size={18} />
+              <span>Upload PDF</span>
+            </>
+          )}
+          <input
+            type="file"
+            accept="application/pdf"
+            onChange={handlePDFUpload}
+            disabled={isUploadingPDF}
+            className="hidden"
+          />
+        </label>
+      </div>
+
+      {/* Salary Trend Chart */}
+      {salaryTrendData.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+          <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-4">
+            Trend Pendapatan Bulanan
+          </h4>
+          <ResponsiveContainer width="100%" height={250}>
+            <LineChart data={salaryTrendData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis 
+                dataKey="month" 
+                tick={{ fontSize: 12 }}
+                stroke="#6b7280"
+              />
+              <YAxis 
+                tick={{ fontSize: 12 }}
+                stroke="#6b7280"
+                tickFormatter={(v) => `${(v / 1000000).toFixed(0)}jt`}
+              />
+              <ReTooltip 
+                formatter={(v) => fmt(v)}
+                contentStyle={{ 
+                  backgroundColor: '#fff',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px'
+                }}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="amount" 
+                stroke="#8b5cf6" 
+                strokeWidth={2}
+                dot={{ fill: '#8b5cf6', r: 4 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Salary Slips Table */}
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+        <h3 className="font-bold text-gray-800 dark:text-gray-100 mb-4">
+          Riwayat Slip Gaji
+        </h3>
+        {salarySlips.length === 0 ? (
+          <div className="text-center py-12 text-gray-400 dark:text-gray-500">
+            <ScanLine size={48} className="mx-auto mb-3 opacity-50" />
+            <p className="text-sm">Belum ada arsip slip gaji</p>
+            <p className="text-xs mt-1">Upload PDF untuk ekstrak data (privacy-friendly, file tidak disimpan)</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-purple-50 dark:bg-purple-900/20 border-b-2 border-purple-200 dark:border-purple-800">
+                  <th className="text-left p-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Periode</th>
+                  <th className="text-right p-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Total Pendapatan</th>
+                  <th className="text-center p-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Perubahan</th>
+                  <th className="text-left p-3 text-sm font-semibold text-gray-700 dark:text-gray-300">File</th>
+                  <th className="text-center p-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {salarySlips.map((slip, idx) => {
+                  const prevSlip = salarySlips[idx + 1];
+                  const change = prevSlip 
+                    ? ((slip.totalAmount - prevSlip.totalAmount) / prevSlip.totalAmount) * 100
+                    : 0;
+                  const isIncrease = change > 0;
+                  const isDecrease = change < 0;
+
+                  return (
+                    <tr
+                      key={slip.id}
+                      onClick={() => setSelectedSlip(slip)}
+                      className="border-b border-gray-100 dark:border-gray-700 hover:bg-purple-50 dark:hover:bg-purple-900/10 cursor-pointer transition-colors"
+                    >
+                      <td className="p-3">
+                        <div className="font-semibold text-gray-800 dark:text-gray-100">
+                          {['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+                            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'][slip.month - 1]} {slip.year}
+                        </div>
+                      </td>
+                      <td className="p-3 text-right">
+                        <div className="font-bold text-purple-600 dark:text-purple-400">
+                          {fmt(slip.totalAmount)}
+                        </div>
+                      </td>
+                      <td className="p-3 text-center">
+                        {idx > 0 && change !== 0 ? (
+                          <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full ${
+                            isIncrease 
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+                              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                          }`}>
+                            {isIncrease ? '📈' : '📉'} {change > 0 ? '+' : ''}{change.toFixed(1)}%
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="p-3">
+                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[200px]">
+                          {slip.fileName}
+                        </div>
+                      </td>
+                      <td className="p-3 text-center">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteSalarySlip(slip.id);
+                          }}
+                          className="p-2 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg inline-flex"
+                          title="Hapus"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Detail Modal */}
+      {selectedSlip && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedSlip(null)}
+        >
+          <div 
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-gradient-to-r from-purple-600 to-indigo-600 p-6 rounded-t-2xl">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-2xl font-bold text-white mb-1">
+                    Detail Slip Gaji
+                  </h3>
+                  <p className="text-purple-100">
+                    {['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+                      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'][selectedSlip.month - 1]} {selectedSlip.year}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedSlip(null)}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X size={24} className="text-white" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-6">
+              {/* Total Amount */}
+              <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 p-6 rounded-xl border border-purple-200 dark:border-purple-800">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Total Penghasilan Bersih</p>
+                <p className="text-4xl font-bold text-purple-600 dark:text-purple-400">
+                  {fmt(selectedSlip.netAmount || selectedSlip.totalAmount)}
+                </p>
+              </div>
+
+              {selectedSlip.breakdown?.totals && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
+                    <p className="text-xs text-emerald-700 dark:text-emerald-300 mb-1">Total Penghasilan Kotor</p>
+                    <p className="text-lg font-bold text-emerald-700 dark:text-emerald-300">{fmt(selectedSlip.breakdown.totals.totalPenghasilanKotor || selectedSlip.grossAmount || 0)}</p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+                    <p className="text-xs text-red-700 dark:text-red-300 mb-1">Jumlah Potongan</p>
+                    <p className="text-lg font-bold text-red-700 dark:text-red-300">{fmt(selectedSlip.breakdown.totals.jumlahPotongan || selectedSlip.deductionAmount || 0)}</p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800">
+                    <p className="text-xs text-purple-700 dark:text-purple-300 mb-1">Take Home Pay</p>
+                    <p className="text-lg font-bold text-purple-700 dark:text-purple-300">{fmt(selectedSlip.breakdown.totals.totalPenghasilanBersih || selectedSlip.netAmount || selectedSlip.totalAmount || 0)}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* ITB Breakdown */}
+              {selectedSlip.breakdown ? (
+                <div className="space-y-5">
+                  <div>
+                    <h4 className="font-bold text-gray-800 dark:text-gray-100 mb-3 flex items-center gap-2">
+                      <Coins size={20} className="text-emerald-600" />
+                      A. Penghasilan (Gaji & Tunjangan Melekat)
+                    </h4>
+                    <div className="space-y-2">
+                      {selectedSlip.breakdown.incomeMain?.map((item, i) => (
+                        <div key={`m-${i}`} className="flex justify-between items-center p-3 bg-emerald-50 dark:bg-emerald-900/10 rounded-lg border border-emerald-100 dark:border-emerald-800/40">
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{item.name}</span>
+                          <span className="text-sm font-bold text-emerald-700 dark:text-emerald-300">{fmt(item.amount || 0)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-bold text-gray-800 dark:text-gray-100 mb-3 flex items-center gap-2">
+                      <Coins size={20} className="text-blue-600" />
+                      Insentif / Tunjangan / Honorarium Lainnya
+                    </h4>
+                    <div className="space-y-2">
+                      {selectedSlip.breakdown.incomeAdditional?.map((item, i) => (
+                        <div key={`a-${i}`} className="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-blue-100 dark:border-blue-800/40">
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{item.name}</span>
+                          <span className="text-sm font-bold text-blue-700 dark:text-blue-300">{fmt(item.amount || 0)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-bold text-gray-800 dark:text-gray-100 mb-3 flex items-center gap-2">
+                      <Minus size={20} className="text-red-600" />
+                      B. Potongan
+                    </h4>
+                    <div className="space-y-2">
+                      {selectedSlip.breakdown.deductions?.map((item, i) => (
+                        <div key={`d-${i}`} className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-900/10 rounded-lg border border-red-100 dark:border-red-800/40">
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{item.name}</span>
+                          <span className="text-sm font-bold text-red-700 dark:text-red-300">{fmt(item.amount || 0)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                selectedSlip.items && selectedSlip.items.length > 0 && (
+                  <div>
+                    <h4 className="font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
+                      <Coins size={20} className="text-purple-600" />
+                      Rincian Pendapatan
+                    </h4>
+                    <div className="space-y-2">
+                      {selectedSlip.items.map((item, i) => (
+                        <div 
+                          key={i}
+                          className="flex justify-between items-center p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+                        >
+                          <span className="font-medium text-gray-700 dark:text-gray-300">{item.name}</span>
+                          <span className="font-bold text-purple-600 dark:text-purple-400">{fmt(item.amount)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              )}
+
+              {/* File Info */}
+              <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <ScanLine size={16} />
+                  <span className="font-medium">File:</span>
+                  <span className="truncate">{selectedSlip.fileName}</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-500 mt-2">
+                  <CheckCircle size={14} />
+                  <span>Parsed only (file tidak disimpan untuk privacy)</span>
+                </div>
+              </div>
+
+              {/* Close Button */}
+              <button
+                onClick={() => setSelectedSlip(null)}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg font-medium transition-colors"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tips Panel */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-xl border border-blue-200 dark:border-blue-800">
+        <h4 className="font-bold text-blue-900 dark:text-blue-300 mb-3 flex items-center gap-2">
+          <AlertTriangle size={18} />
+          Tips Arsip Slip Gaji
+        </h4>
+        <div className="space-y-2 text-sm text-blue-800 dark:text-blue-300">
+          <p>📄 <strong>Upload Rutin:</strong> Upload slip gaji setiap bulan untuk tracking yang akurat</p>
+          <p>🔒 <strong>Privacy:</strong> File PDF tidak disimpan, hanya hasil parsing yang tersimpan</p>
+          <p>📈 <strong>Monitoring:</strong> Pantau perubahan pendapatan bulan ke bulan</p>
+          <p>🤖 <strong>Smart Parsing:</strong> Sistem otomatis ekstrak detail slip gaji langsung dari teks PDF</p>
+          <p>💡 <strong>Tips:</strong> Pastikan slip gaji terbaca jelas untuk hasil parsing optimal</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- 7. INCOME DIVERSIFICATION DASHBOARD ---
+const IncomeDiversificationView = ({ userId, appId, fmt, transactions }) => {
+  const [incomeSources, setIncomeSources] = useState([]);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [passiveIncomeGoal, setPassiveIncomeGoal] = useState(30); // Default 30%
+  const [formData, setFormData] = useState({
+    id: null,
+    name: '',
+    type: 'active', // active or passive
+    category: '',
+    monthlyAmount: 0,
+    isRecurring: true,
+    description: ''
+  });
+
+  // Income categories
+  const incomeCategories = {
+    active: [
+      { value: 'salary-base', label: 'Gaji Pokok Dosen', icon: '💼' },
+      { value: 'salary-certification', label: 'Tunjangan Sertifikasi', icon: '🎓' },
+      { value: 'teaching-extra', label: 'Honor Mengajar Tambahan', icon: '👨‍🏫' },
+      { value: 'research', label: 'Honorarium Penelitian', icon: '🔬' },
+      { value: 'community-service', label: 'Honorarium Pengabdian', icon: '🤝' },
+      { value: 'consultation', label: 'Konsultasi/Workshop', icon: '💡' },
+      { value: 'freelance', label: 'Freelance/Proyek', icon: '💻' },
+      { value: 'other-active', label: 'Lainnya (Aktif)', icon: '⚡' }
+    ],
+    passive: [
+      { value: 'book-royalty', label: 'Royalti Buku', icon: '📚' },
+      { value: 'investment-dividend', label: 'Dividen Investasi', icon: '📈' },
+      { value: 'rental-income', label: 'Pendapatan Sewa', icon: '🏠' },
+      { value: 'online-course', label: 'Kursus Online', icon: '🎥' },
+      { value: 'affiliate', label: 'Affiliate/Komisi', icon: '🔗' },
+      { value: 'patent-license', label: 'Lisensi/Paten', icon: '⚖️' },
+      { value: 'other-passive', label: 'Lainnya (Pasif)', icon: '💤' }
+    ]
+  };
+
+  // Load income sources from Firestore
+  useEffect(() => {
+    if (!userId) return;
+
+    const unsubscribe = onSnapshot(
+      query(collection(db, 'artifacts', appId, 'users', userId, 'incomeSources')),
+      (snapshot) => {
+        const data = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setIncomeSources(data);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [userId, appId]);
+
+  // Load passive income goal
+  useEffect(() => {
+    if (!userId) return;
+
+    const loadGoal = async () => {
+      try {
+        const goalDoc = await getDoc(doc(db, 'artifacts', appId, 'users', userId, 'settings', 'incomeGoal'));
+        if (goalDoc.exists() && goalDoc.data().passiveIncomeGoal) {
+          setPassiveIncomeGoal(goalDoc.data().passiveIncomeGoal);
+        }
+      } catch (error) {
+        console.error('Error loading goal:', error);
+      }
+    };
+
+    loadGoal();
+  }, [userId, appId]);
+
+  // Calculate statistics
+  const stats = useMemo(() => {
+    const activeIncome = incomeSources
+      .filter(s => s.type === 'active')
+      .reduce((sum, s) => sum + (s.monthlyAmount || 0), 0);
+    
+    const passiveIncome = incomeSources
+      .filter(s => s.type === 'passive')
+      .reduce((sum, s) => sum + (s.monthlyAmount || 0), 0);
+    
+    const totalIncome = activeIncome + passiveIncome;
+    const passivePercentage = totalIncome > 0 ? (passiveIncome / totalIncome) * 100 : 0;
+    const activePercentage = totalIncome > 0 ? (activeIncome / totalIncome) * 100 : 0;
+
+    // Income from transactions (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const recentIncome = transactions
+      .filter(t => t.type === 'income' && t.date >= thirtyDaysAgo)
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    return {
+      activeIncome,
+      passiveIncome,
+      totalIncome,
+      passivePercentage,
+      activePercentage,
+      recentIncome,
+      goalDiff: passivePercentage - passiveIncomeGoal,
+      sourcesCount: incomeSources.length
+    };
+  }, [incomeSources, transactions, passiveIncomeGoal]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!formData.name || !formData.category) {
+      alert('Nama dan kategori harus diisi');
+      return;
+    }
+
+    try {
+      const payload = {
+        name: formData.name,
+        type: formData.type,
+        category: formData.category,
+        monthlyAmount: Number(formData.monthlyAmount) || 0,
+        isRecurring: formData.isRecurring,
+        description: formData.description || '',
+        updatedAt: serverTimestamp()
+      };
+
+      if (formData.id) {
+        await updateDoc(doc(db, 'artifacts', appId, 'users', userId, 'incomeSources', formData.id), payload);
+      } else {
+        await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'incomeSources'), {
+          ...payload,
+          createdAt: serverTimestamp()
+        });
+      }
+
+      setIsFormOpen(false);
+      setFormData({ id: null, name: '', type: 'active', category: '', monthlyAmount: 0, isRecurring: true, description: '' });
+    } catch (error) {
+      console.error('Error saving income source:', error);
+      alert('Gagal menyimpan data');
+    }
+  };
+
+  const handleEdit = (source) => {
+    setFormData({
+      id: source.id,
+      name: source.name,
+      type: source.type,
+      category: source.category,
+      monthlyAmount: source.monthlyAmount,
+      isRecurring: source.isRecurring,
+      description: source.description || ''
+    });
+    setIsFormOpen(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (confirm('Hapus sumber pendapatan ini?')) {
+      try {
+        await deleteDoc(doc(db, 'artifacts', appId, 'users', userId, 'incomeSources', id));
+      } catch (error) {
+        console.error('Error deleting income source:', error);
+        alert('Gagal menghapus data');
+      }
+    }
+  };
+
+  const savePassiveIncomeGoal = async (goal) => {
+    try {
+      await setDoc(doc(db, 'artifacts', appId, 'users', userId, 'settings', 'incomeGoal'), {
+        passiveIncomeGoal: Number(goal),
+        updatedAt: serverTimestamp()
+      });
+      setPassiveIncomeGoal(Number(goal));
+    } catch (error) {
+      console.error('Error saving goal:', error);
+      alert('Gagal menyimpan target');
+    }
+  };
+
+  // Chart data
+  const chartData = [
+    { name: 'Active Income', value: stats.activeIncome, color: '#3b82f6' },
+    { name: 'Passive Income', value: stats.passiveIncome, color: '#10b981' }
+  ].filter(d => d.value > 0);
+
+  const categoryIcon = (category) => {
+    const allCategories = [...incomeCategories.active, ...incomeCategories.passive];
+    return allCategories.find(c => c.value === category)?.icon || '💰';
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+            <BarChart3 size={28} className="text-emerald-600" />
+            Diversifikasi Pendapatan
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Kelola dan pantau sumber pendapatan aktif & pasif
+          </p>
+        </div>
+        <button
+          onClick={() => {
+            setIsFormOpen(!isFormOpen);
+            setFormData({ id: null, name: '', type: 'active', category: '', monthlyAmount: 0, isRecurring: true, description: '' });
+          }}
+          className="bg-emerald-600 text-white px-4 py-2 rounded-lg flex gap-2 hover:bg-emerald-700 transition-colors"
+        >
+          {isFormOpen ? <X size={18} /> : <Plus size={18} />}
+          <span>{isFormOpen ? 'Batal' : 'Tambah Sumber'}</span>
+        </button>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-xl shadow-lg text-white">
+          <div className="flex items-center justify-between mb-2">
+            <Briefcase size={24} />
+            <span className="text-sm opacity-80">Active</span>
+          </div>
+          <p className="text-2xl font-bold">{fmt(stats.activeIncome)}</p>
+          <p className="text-xs opacity-80 mt-1">{stats.activePercentage.toFixed(1)}% dari total</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-green-500 to-green-600 p-6 rounded-xl shadow-lg text-white">
+          <div className="flex items-center justify-between mb-2">
+            <TrendingUp size={24} />
+            <span className="text-sm opacity-80">Passive</span>
+          </div>
+          <p className="text-2xl font-bold">{fmt(stats.passiveIncome)}</p>
+          <p className="text-xs opacity-80 mt-1">{stats.passivePercentage.toFixed(1)}% dari total</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-6 rounded-xl shadow-lg text-white">
+          <div className="flex items-center justify-between mb-2">
+            <Wallet size={24} />
+            <span className="text-sm opacity-80">Total</span>
+          </div>
+          <p className="text-2xl font-bold">{fmt(stats.totalIncome)}</p>
+          <p className="text-xs opacity-80 mt-1">{stats.sourcesCount} sumber</p>
+        </div>
+
+        <div className={`bg-gradient-to-br ${stats.goalDiff >= 0 ? 'from-emerald-500 to-emerald-600' : 'from-amber-500 to-amber-600'} p-6 rounded-xl shadow-lg text-white`}>
+          <div className="flex items-center justify-between mb-2">
+            <Target size={24} />
+            <span className="text-sm opacity-80">Target</span>
+          </div>
+          <p className="text-2xl font-bold">{passiveIncomeGoal}%</p>
+          <p className="text-xs opacity-80 mt-1">
+            {stats.goalDiff >= 0 ? '✅ Target tercapai!' : `🎯 Kurang ${Math.abs(stats.goalDiff).toFixed(1)}%`}
+          </p>
+        </div>
+      </div>
+
+      {/* Form Input */}
+      {isFormOpen && (
+        <form
+          onSubmit={handleSubmit}
+          className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border border-emerald-100 dark:border-gray-700"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Nama Sumber Pendapatan
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 dark:text-white"
+                placeholder="Contoh: Gaji Universitas"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Tipe Pendapatan
+              </label>
+              <select
+                value={formData.type}
+                onChange={(e) => setFormData({ ...formData, type: e.target.value, category: '' })}
+                className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 dark:text-white"
+              >
+                <option value="active">💼 Active Income (Bekerja Aktif)</option>
+                <option value="passive">💤 Passive Income (Otomatis)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Kategori
+              </label>
+              <select
+                required
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 dark:text-white"
+              >
+                <option value="">Pilih Kategori...</option>
+                {incomeCategories[formData.type].map(cat => (
+                  <option key={cat.value} value={cat.value}>
+                    {cat.icon} {cat.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Jumlah per Bulan (Rp)
+              </label>
+              <input
+                type="number"
+                min="0"
+                required
+                value={formData.monthlyAmount}
+                onChange={(e) => setFormData({ ...formData, monthlyAmount: e.target.value })}
+                className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 dark:text-white"
+                placeholder="0"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Deskripsi/Catatan
+              </label>
+              <input
+                type="text"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 dark:text-white"
+                placeholder="Opsional: Detail tambahan..."
+              />
+            </div>
+
+            <div className="md:col-span-2 flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="isRecurring"
+                checked={formData.isRecurring}
+                onChange={(e) => setFormData({ ...formData, isRecurring: e.target.checked })}
+                className="w-4 h-4 rounded"
+              />
+              <label htmlFor="isRecurring" className="text-sm text-gray-700 dark:text-gray-300">
+                Pendapatan Rutin (Setiap Bulan)
+              </label>
+            </div>
+          </div>
+
+          <div className="flex justify-end mt-4">
+            <button
+              type="submit"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-lg font-medium flex items-center gap-2"
+            >
+              <Save size={18} />
+              {formData.id ? 'Update' : 'Simpan'}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Passive Income Goal Setting */}
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 p-6 rounded-xl border border-amber-200 dark:border-amber-800">
+        <h3 className="font-bold text-amber-900 dark:text-amber-300 mb-4 flex items-center gap-2">
+          <Target size={20} />
+          Target Passive Income
+        </h3>
+        <div className="flex items-center gap-4">
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={passiveIncomeGoal}
+            onChange={(e) => savePassiveIncomeGoal(e.target.value)}
+            className="flex-1"
+          />
+          <div className="text-2xl font-bold text-amber-900 dark:text-amber-200 min-w-[80px]">
+            {passiveIncomeGoal}%
+          </div>
+        </div>
+        <p className="text-sm text-amber-700 dark:text-amber-400 mt-3">
+          Target: {fmt(stats.totalIncome * passiveIncomeGoal / 100)} dari passive income
+        </p>
+      </div>
+
+      {/* Chart */}
+      {chartData.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+          <h3 className="font-bold text-gray-800 dark:text-gray-100 mb-4">
+            Proporsi Active vs Passive Income
+          </h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <RePieChart>
+              <Pie
+                data={chartData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={(entry) => `${entry.name}: ${((entry.value / stats.totalIncome) * 100).toFixed(1)}%`}
+                outerRadius={100}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <ReTooltip formatter={(v) => fmt(v)} />
+            </RePieChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Income Sources List */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Active Income */}
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+          <h3 className="font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
+            <Briefcase size={20} className="text-blue-600" />
+            Active Income
+          </h3>
+          <div className="space-y-3">
+            {incomeSources.filter(s => s.type === 'active').length === 0 ? (
+              <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-8">
+                Belum ada sumber active income
+              </p>
+            ) : (
+              incomeSources
+                .filter(s => s.type === 'active')
+                .map(source => (
+                  <div
+                    key={source.id}
+                    className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-blue-100 dark:border-blue-800"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <p className="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                          <span>{categoryIcon(source.category)}</span>
+                          {source.name}
+                        </p>
+                        {source.description && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {source.description}
+                          </p>
+                        )}
+                        <p className="text-lg font-bold text-blue-600 dark:text-blue-400 mt-2">
+                          {fmt(source.monthlyAmount)}<span className="text-xs font-normal">/bulan</span>
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEdit(source)}
+                          className="p-2 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/20 rounded-lg"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(source.id)}
+                          className="p-2 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+            )}
+          </div>
+        </div>
+
+        {/* Passive Income */}
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+          <h3 className="font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
+            <TrendingUp size={20} className="text-green-600" />
+            Passive Income
+          </h3>
+          <div className="space-y-3">
+            {incomeSources.filter(s => s.type === 'passive').length === 0 ? (
+              <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-8">
+                Belum ada sumber passive income
+              </p>
+            ) : (
+              incomeSources
+                .filter(s => s.type === 'passive')
+                .map(source => (
+                  <div
+                    key={source.id}
+                    className="p-4 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-100 dark:border-green-800"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <p className="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                          <span>{categoryIcon(source.category)}</span>
+                          {source.name}
+                        </p>
+                        {source.description && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {source.description}
+                          </p>
+                        )}
+                        <p className="text-lg font-bold text-green-600 dark:text-green-400 mt-2">
+                          {fmt(source.monthlyAmount)}<span className="text-xs font-normal">/bulan</span>
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEdit(source)}
+                          className="p-2 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/20 rounded-lg"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(source.id)}
+                          className="p-2 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Tips Panel */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-xl border border-blue-200 dark:border-blue-800">
+        <h4 className="font-bold text-blue-900 dark:text-blue-300 mb-3 flex items-center gap-2">
+          <AlertTriangle size={18} />
+          Tips Diversifikasi Pendapatan
+        </h4>
+        <div className="space-y-2 text-sm text-blue-800 dark:text-blue-300">
+          <p>💼 <strong>Active Income:</strong> Pendapatan dari pekerjaan aktif (gaji, honor, konsultasi)</p>
+          <p>💤 <strong>Passive Income:</strong> Pendapatan yang berjalan otomatis (royalti, dividen, sewa)</p>
+          <p>🎯 <strong>Target Ideal:</strong> 30-50% dari passive income untuk financial freedom</p>
+          <p>📈 <strong>Strategi:</strong> Mulai dari passive income kecil (buku, kursus online) lalu kembangkan</p>
+          <p>🔄 <strong>Diversifikasi:</strong> Jangan bergantung pada satu sumber pendapatan saja</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- 8. MAIN APP (Defined Last) ---
 export default function App() {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -2175,6 +5141,15 @@ export default function App() {
   const [privacyMode, setPrivacyMode] = useState(false);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
+  const [isQuickAddModalOpen, setIsQuickAddModalOpen] = useState(false);
+  
+  // Pull to Refresh States
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isPulling, setIsPulling] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const touchStartY = useRef(0);
+  const mainRef = useRef(null);
   
   // Data States
   const [transactions, setTransactions] = useState([]);
@@ -2183,6 +5158,71 @@ export default function App() {
   const [investTypes, setInvestTypes] = useState([]);
   const [wallets, setWallets] = useState([]);
   const [subscriptions, setSubscriptions] = useState([]);
+  
+  // Refs to track initialization
+  const walletsInitialized = useRef(false);
+  const investTypesInitialized = useRef(false);
+  const categoriesInitialized = useRef(false);
+
+  // Version check on mount
+  useEffect(() => {
+    console.log(`🚀 Dompet Keluarga v${APP_VERSION} - Parser Loaded`);
+    console.log(`📱 Device: ${/mobile|android|iphone|ipad/i.test(navigator.userAgent) ? 'Mobile' : 'Desktop'}`);
+    console.log(`🔄 Timestamp: ${new Date().toISOString()}`);
+  }, []);
+
+  // Pull to Refresh Handlers
+  const handleTouchStart = (e) => {
+    if (!mainRef.current || window.scrollY > 0) return;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchMove = (e) => {
+    if (!mainRef.current || window.scrollY > 0 || isRefreshing) return;
+    
+    const touchY = e.touches[0].clientY;
+    const distance = touchY - touchStartY.current;
+    
+    if (distance > 0 && distance < 150) {
+      setIsPulling(true);
+      setPullDistance(distance);
+    }
+  };
+
+  const handleTouchEnd = async () => {
+    if (!isPulling) return;
+    
+    setIsPulling(false);
+    
+    if (pullDistance > 80) {
+      setIsRefreshing(true);
+      console.log('🔄 Force refresh triggered...');
+      
+      // Wait a bit for animation
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Force reload with cache bypass
+      window.location.reload(true);
+    } else {
+      setPullDistance(0);
+    }
+  };
+
+  // Attach pull to refresh on mobile
+  useEffect(() => {
+    const main = mainRef.current;
+    if (!main || !/mobile|android|iphone|ipad/i.test(navigator.userAgent)) return;
+    
+    main.addEventListener('touchstart', handleTouchStart, { passive: true });
+    main.addEventListener('touchmove', handleTouchMove, { passive: true });
+    main.addEventListener('touchend', handleTouchEnd, { passive: true });
+    
+    return () => {
+      main.removeEventListener('touchstart', handleTouchStart);
+      main.removeEventListener('touchmove', handleTouchMove);
+      main.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isPulling, pullDistance, isRefreshing]);
 
   // Auth Handlers
   const handleLogin = async () => { try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch (e) { alert(e.message); } };
@@ -2206,8 +5246,20 @@ export default function App() {
 
   // Data Sync
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      // Reset flags when user logs out
+      walletsInitialized.current = false;
+      investTypesInitialized.current = false;
+      categoriesInitialized.current = false;
+      return;
+    }
+    
     const uid = user.uid;
+    
+    // Reset flags for new user
+    walletsInitialized.current = false;
+    investTypesInitialized.current = false;
+    categoriesInitialized.current = false;
 
     const unsubTrans = onSnapshot(query(collection(db, 'artifacts', appId, 'users', uid, 'transactions'), orderBy('date', 'desc')), 
       (s) => setTransactions(s.docs.map(d => ({ 
@@ -2223,38 +5275,109 @@ export default function App() {
         createdAt: d.data().createdAt?.toDate() 
       }))));
 
-    const unsubCats = onSnapshot(query(collection(db, 'artifacts', appId, 'users', uid, 'categories')), (s) => {
+    const unsubCats = onSnapshot(query(collection(db, 'artifacts', appId, 'users', uid, 'categories')), async (s) => {
       const data = s.docs.map(d => ({ id: d.id, ...d.data() }));
-      if (data.length === 0) {
-        const batchRef = collection(db, 'artifacts', appId, 'users', uid, 'categories');
-        [...DEFAULT_EXPENSE_CATEGORIES.map(n => ({name: n, type: 'expense'})), ...DEFAULT_INCOME_CATEGORIES.map(n => ({name: n, type: 'income'}))]
-          .forEach(c => addDoc(batchRef, { ...c, budget: 0 }));
-      } else {
+      
+      if (data.length === 0 && !categoriesInitialized.current) {
+        categoriesInitialized.current = true;
+        try {
+          const batchRef = collection(db, 'artifacts', appId, 'users', uid, 'categories');
+          const defaultCategories = [
+            ...DEFAULT_EXPENSE_CATEGORIES.map(n => ({name: n, type: 'expense', budget: 0})),
+            ...DEFAULT_INCOME_CATEGORIES.map(n => ({name: n, type: 'income', budget: 0}))
+          ];
+          // Use Promise.all to ensure all docs are added before next snapshot
+          await Promise.all(defaultCategories.map(c => addDoc(batchRef, c)));
+          console.log('✅ Categories initialized');
+        } catch (error) {
+          console.error('❌ Error initializing categories:', error);
+          categoriesInitialized.current = false; // Reset on error
+        }
+      } else if (data.length > 0) {
+        // Additional safeguard: Check for duplicates by name+type combination
+        const uniqueCategories = [];
+        const seenKeys = new Set();
+        
+        for (const cat of data) {
+          const key = `${cat.name}-${cat.type}`;
+          if (!seenKeys.has(key)) {
+            seenKeys.add(key);
+            uniqueCategories.push(cat);
+          } else {
+            console.warn('⚠️ Duplicate category detected:', cat.name, cat.type, cat.id);
+          }
+        }
+        
         setCategories({
-          expense: data.filter(c => c.type === 'expense').map(c => c.name).sort(),
-          income: data.filter(c => c.type === 'income').map(c => c.name).sort(),
-          raw: data
+          expense: uniqueCategories.filter(c => c.type === 'expense').map(c => c.name).sort(),
+          income: uniqueCategories.filter(c => c.type === 'income').map(c => c.name).sort(),
+          raw: uniqueCategories
         });
       }
     });
 
-    const unsubInvTypes = onSnapshot(query(collection(db, 'artifacts', appId, 'users', uid, 'investment_types')), (s) => {
+    const unsubInvTypes = onSnapshot(query(collection(db, 'artifacts', appId, 'users', uid, 'investment_types')), async (s) => {
       const data = s.docs.map(d => ({ id: d.id, ...d.data() }));
-      if (data.length === 0) {
-        const batchRef = collection(db, 'artifacts', appId, 'users', uid, 'investment_types');
-        DEFAULT_INVESTMENT_TYPES.forEach(t => addDoc(batchRef, t));
-      } else {
-        setInvestTypes(data);
+      
+      if (data.length === 0 && !investTypesInitialized.current) {
+        investTypesInitialized.current = true;
+        try {
+          const batchRef = collection(db, 'artifacts', appId, 'users', uid, 'investment_types');
+          // Use Promise.all to ensure all docs are added atomically
+          await Promise.all(DEFAULT_INVESTMENT_TYPES.map(t => addDoc(batchRef, t)));
+          console.log('✅ Investment types initialized');
+        } catch (error) {
+          console.error('❌ Error initializing investment types:', error);
+          investTypesInitialized.current = false; // Reset on error
+        }
+      } else if (data.length > 0) {
+        // Additional safeguard: Check for duplicates by name
+        const uniqueTypes = [];
+        const seenNames = new Set();
+        
+        for (const type of data) {
+          if (!seenNames.has(type.name)) {
+            seenNames.add(type.name);
+            uniqueTypes.push(type);
+          } else {
+            console.warn('⚠️ Duplicate investment type detected:', type.name, type.id);
+          }
+        }
+        
+        setInvestTypes(uniqueTypes);
       }
     });
 
-    const unsubWallets = onSnapshot(query(collection(db, 'artifacts', appId, 'users', uid, 'wallets')), (s) => {
+    const unsubWallets = onSnapshot(query(collection(db, 'artifacts', appId, 'users', uid, 'wallets')), async (s) => {
       const data = s.docs.map(d => ({ id: d.id, ...d.data() }));
-      if (data.length === 0) {
-        const batchRef = collection(db, 'artifacts', appId, 'users', uid, 'wallets');
-        DEFAULT_WALLETS.forEach(w => addDoc(batchRef, w));
-      } else {
-        setWallets(data);
+      
+      if (data.length === 0 && !walletsInitialized.current) {
+        walletsInitialized.current = true;
+        try {
+          const batchRef = collection(db, 'artifacts', appId, 'users', uid, 'wallets');
+          // Use Promise.all to ensure all docs are added atomically
+          await Promise.all(DEFAULT_WALLETS.map(w => addDoc(batchRef, w)));
+          console.log('✅ Wallets initialized');
+        } catch (error) {
+          console.error('❌ Error initializing wallets:', error);
+          walletsInitialized.current = false; // Reset on error
+        }
+      } else if (data.length > 0) {
+        // Additional safeguard: Check for duplicates by name
+        const uniqueWallets = [];
+        const seenNames = new Set();
+        
+        for (const wallet of data) {
+          if (!seenNames.has(wallet.name)) {
+            seenNames.add(wallet.name);
+            uniqueWallets.push(wallet);
+          } else {
+            // Log duplicate found (for debugging)
+            console.warn('⚠️ Duplicate wallet detected:', wallet.name, wallet.id);
+          }
+        }
+        
+        setWallets(uniqueWallets);
       }
     });
 
@@ -2263,7 +5386,14 @@ export default function App() {
       setSubscriptions(data);
     });
 
-    return () => { unsubTrans(); unsubInv(); unsubCats(); unsubInvTypes(); unsubWallets(); unsubSubs(); };
+    return () => { 
+      unsubTrans(); 
+      unsubInv(); 
+      unsubCats(); 
+      unsubInvTypes(); 
+      unsubWallets(); 
+      unsubSubs(); 
+    };
   }, [user]);
 
   // --- AUTOMATION: Generate Subscription Transactions ---
@@ -2351,6 +5481,37 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-100 flex flex-col md:flex-row transition-colors duration-300">
+      {/* Pull to Refresh Indicator */}
+      {isPulling && (
+        <div 
+          className="fixed top-0 left-0 right-0 z-[100] flex items-center justify-center bg-emerald-500 text-white transition-all duration-200 ease-out"
+          style={{ 
+            height: `${Math.min(pullDistance, 80)}px`,
+            opacity: pullDistance / 80 
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <RefreshCw 
+              size={20} 
+              className={pullDistance > 80 ? 'animate-spin' : ''} 
+            />
+            <span className="text-sm font-medium">
+              {pullDistance > 80 ? 'Release to refresh...' : 'Pull to refresh...'}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Loading Overlay during Refresh */}
+      {isRefreshing && (
+        <div className="fixed inset-0 z-[100] bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <RefreshCw size={32} className="text-emerald-600 animate-spin" />
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Refreshing app...</p>
+          </div>
+        </div>
+      )}
+
       {/* Sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-white dark:bg-gray-800 border-r dark:border-gray-700 h-screen sticky top-0 transition-colors duration-300">
         <div className="p-6">
@@ -2364,6 +5525,9 @@ export default function App() {
             <NavBtn id="subscriptions" active={activeTab} set={setActiveTab} icon={<Repeat size={20}/>} label="Langganan" />
             <NavBtn id="wallets" active={activeTab} set={setActiveTab} icon={<CreditCard size={20}/>} label="Rekening & CC" />
             <NavBtn id="investments" active={activeTab} set={setActiveTab} icon={<TrendingUp size={20}/>} label="Investasi & Goal" />
+            <NavBtn id="education-fund" active={activeTab} set={setActiveTab} icon={<GraduationCap size={20}/>} label="Dana Pendidikan" />
+            <NavBtn id="income-diversification" active={activeTab} set={setActiveTab} icon={<BarChart3 size={20}/>} label="Diversifikasi Pendapatan" />
+            <NavBtn id="salary-slip-archive" active={activeTab} set={setActiveTab} icon={<ScanLine size={20}/>} label="Arsip Slip Gaji" />
             <NavBtn id="salary-allocator" active={activeTab} set={setActiveTab} icon={<DollarSign size={20}/>} label="Alokasi Gaji" />
             <NavBtn id="zakat" active={activeTab} set={setActiveTab} icon={<Heart size={20}/>} label="Kalkulator Zakat" />
             <NavBtn id="categories" active={activeTab} set={setActiveTab} icon={<Settings size={20}/>} label="Kategori" />
@@ -2399,7 +5563,7 @@ export default function App() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-4 md:p-8 max-w-5xl mx-auto w-full pb-8 flex flex-col min-h-screen">
+      <main ref={mainRef} className="flex-1 p-4 md:p-8 max-w-5xl mx-auto w-full pb-8 flex flex-col min-h-screen">
         <div className="md:hidden flex justify-between items-center mb-6">
            <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
              <Wallet className="w-6 h-6" />
@@ -2450,6 +5614,9 @@ export default function App() {
                   <NavBtn id="subscriptions" active={activeTab} set={(id) => { setActiveTab(id); setIsMobileMenuOpen(false); }} icon={<Repeat size={20}/>} label="Langganan" />
                   <NavBtn id="wallets" active={activeTab} set={(id) => { setActiveTab(id); setIsMobileMenuOpen(false); }} icon={<CreditCard size={20}/>} label="Rekening & CC" />
                   <NavBtn id="investments" active={activeTab} set={(id) => { setActiveTab(id); setIsMobileMenuOpen(false); }} icon={<TrendingUp size={20}/>} label="Investasi & Goal" />
+                  <NavBtn id="education-fund" active={activeTab} set={(id) => { setActiveTab(id); setIsMobileMenuOpen(false); }} icon={<GraduationCap size={20}/>} label="Dana Pendidikan" />
+                  <NavBtn id="income-diversification" active={activeTab} set={(id) => { setActiveTab(id); setIsMobileMenuOpen(false); }} icon={<BarChart3 size={20}/>} label="Diversifikasi Pendapatan" />
+                  <NavBtn id="salary-slip-archive" active={activeTab} set={(id) => { setActiveTab(id); setIsMobileMenuOpen(false); }} icon={<ScanLine size={20}/>} label="Arsip Slip Gaji" />
                   <NavBtn id="salary-allocator" active={activeTab} set={(id) => { setActiveTab(id); setIsMobileMenuOpen(false); }} icon={<DollarSign size={20}/>} label="Alokasi Gaji" />
                   <NavBtn id="zakat" active={activeTab} set={(id) => { setActiveTab(id); setIsMobileMenuOpen(false); }} icon={<Heart size={20}/>} label="Kalkulator Zakat" />
                   <NavBtn id="categories" active={activeTab} set={(id) => { setActiveTab(id); setIsMobileMenuOpen(false); }} icon={<Settings size={20}/>} label="Kategori" />
@@ -2467,28 +5634,79 @@ export default function App() {
         {activeTab === 'dashboard' && <DashboardView summary={summary} transactions={transactions} investments={investments} categories={categories} investTypes={investTypes} setActiveTab={setActiveTab} fmt={fmt} privacyMode={privacyMode} darkMode={darkMode}/>}
         {activeTab === 'transactions' && <TransactionView transactions={transactions} categories={categories} wallets={wallets} userId={user.uid} appId={appId} fmt={fmt} />}
         {activeTab === 'subscriptions' && <SubscriptionView subscriptions={subscriptions} wallets={wallets} userId={user.uid} appId={appId} fmt={fmt} />}
-        {activeTab === 'wallets' && <WalletView wallets={summary.walletBalances} userId={user.uid} appId={appId} fmt={fmt} privacyMode={privacyMode}/>}
+        {activeTab === 'wallets' && <WalletView wallets={summary.walletBalances} transactions={transactions} userId={user.uid} appId={appId} fmt={fmt} privacyMode={privacyMode}/>}
         {activeTab === 'investments' && <InvestmentView investments={investments} investTypes={investTypes} wallets={wallets} userId={user.uid} appId={appId} fmt={fmt} />}
+        {activeTab === 'education-fund' && <EducationFundView userId={user.uid} appId={appId} fmt={fmt} />}
+        {activeTab === 'income-diversification' && <IncomeDiversificationView userId={user.uid} appId={appId} fmt={fmt} transactions={transactions} />}
+        {activeTab === 'salary-slip-archive' && <SalarySlipArchiveView userId={user.uid} appId={appId} fmt={fmt} />}
         {activeTab === 'salary-allocator' && <SalaryAllocatorView categories={categories} wallets={summary.walletBalances} userId={user.uid} appId={appId} fmt={fmt} />}
         {activeTab === 'zakat' && <ZakatView summary={summary} investments={investments} fmt={fmt} />}
         {activeTab === 'categories' && <CategoryView categories={categories} userId={user.uid} appId={appId} fmt={fmt} />}
 
+        {/* Transaction Modal */}
+        <TransactionModal 
+          isOpen={isTransactionModalOpen} 
+          onClose={() => setIsTransactionModalOpen(false)} 
+          categories={categories} 
+          wallets={summary.walletBalances} 
+          userId={user.uid} 
+          appId={appId} 
+          fmt={fmt}
+        />
+
+        {/* Quick Add Modal */}
+        <QuickAddModal 
+          isOpen={isQuickAddModalOpen} 
+          onClose={() => setIsQuickAddModalOpen(false)} 
+          categories={categories} 
+          wallets={summary.walletBalances} 
+          userId={user.uid} 
+          appId={appId} 
+          fmt={fmt}
+        />
+
         {/* FOOTER */}
-        <footer className="mt-auto pt-10 pb-4 text-center">
+        <footer className="mt-auto pt-10 pb-4 text-center space-y-2">
           <div className="flex items-center justify-center gap-2 text-xs text-gray-400 dark:text-gray-600">
             <span>&copy; {new Date().getFullYear()} Dompet Keluarga dikembangkan oleh <span className="text-emerald-600 dark:text-emerald-500 font-medium">@fauzanalfi</span></span>
+          </div>
+          <div className="flex items-center justify-center gap-3 text-xs text-gray-400 dark:text-gray-600">
+            <span className="flex items-center gap-1">
+              <Bot size={12} />
+              Parser v{APP_VERSION}
+            </span>
+            <span>•</span>
+            <span className="flex items-center gap-1">
+              <RefreshCw size={12} />
+              Pull to Refresh
+            </span>
           </div>
         </footer>
       </main>
 
-      {/* Floating Action Button (FAB) */}
-      <button 
-        onClick={() => setActiveTab('transactions')} 
-        className="fixed bottom-6 right-6 w-16 h-16 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-2xl flex items-center justify-center z-30 transition-all duration-300 hover:scale-110 active:scale-95"
-        title="Tambah Transaksi"
-      >
-        <Plus size={28} strokeWidth={2.5} />
-      </button>
+      {/* Floating Action Button (FAB) Group */}
+      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col gap-3 items-end">
+        {/* Quick Add Button */}
+        <button 
+          onClick={() => setIsQuickAddModalOpen(true)} 
+          className="group flex items-center gap-3 bg-white dark:bg-gray-800 hover:bg-emerald-50 dark:hover:bg-gray-700 border-2 border-emerald-600 text-emerald-600 px-4 py-3 rounded-full shadow-lg transition-all duration-300 hover:scale-105 active:scale-95 touch-manipulation min-h-[48px] min-w-[48px]"
+          title="Quick Add - AI Scanner"
+          aria-label="Quick Add AI Scanner"
+        >
+          <span className="text-sm font-semibold hidden sm:group-hover:inline-block animate-in fade-in slide-in-from-right-2 duration-200">Quick Add</span>
+          <ScanLine size={22} strokeWidth={2.5} />
+        </button>
+        
+        {/* Manual Add Button */}
+        <button 
+          onClick={() => setIsTransactionModalOpen(true)} 
+          className="w-14 h-14 sm:w-16 sm:h-16 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 touch-manipulation"
+          title="Tambah Transaksi Manual"
+          aria-label="Tambah Transaksi Manual"
+        >
+          <Plus size={24} strokeWidth={2.5} className="sm:w-7 sm:h-7" />
+        </button>
+      </div>
     </div>
   );
 }
