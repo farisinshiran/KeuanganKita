@@ -1,32 +1,46 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Globe, AlertTriangle, CheckCircle, Heart } from 'lucide-react';
-
-const fetchGoldPrice = async () => {
-  try {
-    const res = await fetch('https://api.metals.live/v1/spot/gold');
-    if (res.ok) {
-      const data = await res.json();
-      const goldPricePerOz = data.gold;
-      const rateRes = await fetch('https://api.frankfurter.app/latest?from=USD&to=IDR');
-      const rateData = await rateRes.json();
-      const rate = rateData.rates.IDR;
-      if (rate && goldPricePerOz) return (goldPricePerOz * rate) / 31.1035;
-    }
-  } catch (err) {
-    console.warn("API metals.live gagal:", err);
-  }
-  return 700000;
-};
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { Globe, AlertTriangle, CheckCircle, Heart, RefreshCw } from 'lucide-react';
+import { fetchGoldPrice } from '../../utils/api';
 
 const ZakatView = ({ summary, investments, fmt }) => {
   const [goldPrice, setGoldPrice] = useState(null);
+  const [goldSource, setGoldSource] = useState(''); // 'live' | 'cache' | 'default'
   const [loading, setLoading] = useState(true);
   const [customGoldPrice, setCustomGoldPrice] = useState('');
   const NISAB_GOLD_GRAMS = 85;
 
-  useEffect(() => {
-    fetchGoldPrice().then(price => { setGoldPrice(price); setLoading(false); });
+  const loadGoldPrice = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('https://api.metals.live/v1/spot/gold');
+      if (res.ok) {
+        const data = await res.json();
+        const rateRes = await fetch('https://api.frankfurter.app/latest?from=USD&to=IDR');
+        const rateData = await rateRes.json();
+        const rate = rateData.rates.IDR;
+        if (rate && data.gold) {
+          const price = (data.gold * rate) / 31.1035;
+          setGoldPrice(price);
+          setGoldSource('live');
+          // Persist to shared localStorage cache
+          await fetchGoldPrice();
+          setLoading(false);
+          return;
+        }
+      }
+    } catch { /* fall through to fallback */ }
+
+    const fallback = await fetchGoldPrice();
+    const isCached = !!localStorage.getItem('dompet_gold_price');
+    setGoldPrice(fallback);
+    setGoldSource(isCached ? 'cache' : 'default');
+    setLoading(false);
   }, []);
+
+  // loadGoldPrice is async — all setState calls happen after awaited fetches, not synchronously
+  // eslint-disable-next-line react-compiler/react-compiler
+  useEffect(() => { loadGoldPrice(); }, [loadGoldPrice]);
+
 
   const nisab = useMemo(() => {
     const price = customGoldPrice ? Number(customGoldPrice) : goldPrice;
@@ -56,10 +70,17 @@ const ZakatView = ({ summary, investments, fmt }) => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold uppercase mb-1">Harga Emas (Per Gram)</p>
-            {loading ? (
+          {loading ? (
               <p className="text-lg font-bold text-gray-400 animate-pulse">Memuat...</p>
             ) : (
-              <p className="text-lg font-bold text-amber-700 dark:text-amber-300">{fmt(currentPrice || 0)}</p>
+              <div>
+                <p className="text-lg font-bold text-amber-700 dark:text-amber-300">{fmt(currentPrice || 0)}</p>
+                <p className="text-xs mt-1">
+                  {goldSource === 'live' && <span className="text-green-600 dark:text-green-400">✅ Live API</span>}
+                  {goldSource === 'cache' && <span className="text-amber-500 dark:text-amber-400">📦 Dari cache ({new Date(JSON.parse(localStorage.getItem('dompet_gold_price') || '{}').timestamp || 0).toLocaleDateString('id-ID')})</span>}
+                  {goldSource === 'default' && <span className="text-gray-400">⚠️ Estimasi default</span>}
+                </p>
+              </div>
             )}
           </div>
           <div className="space-y-2">
@@ -85,12 +106,12 @@ const ZakatView = ({ summary, investments, fmt }) => {
             <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold uppercase mb-1">Nisab (85 gr)</p>
             <p className="text-lg font-bold text-amber-700 dark:text-amber-300">{fmt(nisab)}</p>
             <button
-              onClick={() => { setLoading(true); fetchGoldPrice().then(p => { setGoldPrice(p); setCustomGoldPrice(''); setLoading(false); }); }}
-              disabled={loading}
-              className="text-xs mt-2 px-2 py-1 bg-amber-100 hover:bg-amber-200 dark:bg-amber-800 text-amber-700 dark:text-amber-300 rounded disabled:opacity-50"
-            >
-              🔄 Refresh
-            </button>
+                onClick={() => { setCustomGoldPrice(''); loadGoldPrice(); }}
+                disabled={loading}
+                className="text-xs mt-2 px-2 py-1 bg-amber-100 hover:bg-amber-200 dark:bg-amber-800 text-amber-700 dark:text-amber-300 rounded disabled:opacity-50 flex items-center gap-1"
+              >
+                <RefreshCw size={12} className={loading ? 'animate-spin' : ''}/> Refresh
+              </button>
           </div>
         </div>
       </div>
