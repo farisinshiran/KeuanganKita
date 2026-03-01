@@ -23,14 +23,17 @@ dist-ssr
 *.sln
 *.sw?
 
-# Firebase
-# Ignore Firebase configuration files with sensitive data
+# Firebase (local cache, logs, emulator artifacts)
 .firebase/
-.firebaserc
-
-# Firebase emulator data
 firebase-debug.log
 firebase-debug.*.log
+firestore-debug.log
+database-debug.log
+storage-debug.log
+pubsub-debug.log
+ui-debug.log
+hub-debug.log
+emulator-data/
 .runtimeconfig.json
 
 # Environment variables
@@ -38,8 +41,9 @@ firebase-debug.*.log
 .env.local
 .env.*.local
 
-# Firebase credentials (if you store them locally)
+# Firebase credentials (local only)
 serviceAccountKey.json
+serviceAccount*.json
 credentials.json
 
 # IDE specific Firebase files
