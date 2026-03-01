@@ -26,6 +26,7 @@ const previousMonthKey = (monthKey) => {
 const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId, fmt }) => {
   const [selectedMonth, setSelectedMonth] = useState(currentMonthKey());
   const [salaries, setSalaries] = useState([createEmptySalarySource()]);
+  const [expenseBudget, setExpenseBudget] = useState('');
   const [allocations, setAllocations] = useState([]);
   const [selectedWallet, setSelectedWallet] = useState('');
   const [isMonthLoading, setIsMonthLoading] = useState(false);
@@ -55,35 +56,54 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
 
   const totalIncome = salaryTotal + incomeFromTransactions;
 
-  const monthlySpendingTransactions = useMemo(
+  const monthlyExpenseTransactions = useMemo(
     () => (transactions || []).filter(tx => {
       if (!tx?.date || toMonthKey(tx.date) !== selectedMonth) return false;
-      return tx.type === 'expense' || tx.type === 'investment';
+      return tx.type === 'expense';
+    }),
+    [transactions, selectedMonth]
+  );
+
+  const monthlyInvestmentTransactions = useMemo(
+    () => (transactions || []).filter(tx => {
+      if (!tx?.date || toMonthKey(tx.date) !== selectedMonth) return false;
+      return tx.type === 'investment';
     }),
     [transactions, selectedMonth]
   );
 
   const spendingByCategory = useMemo(() => {
     const map = new Map();
-    for (const tx of monthlySpendingTransactions) {
-      const categoryName = tx.type === 'investment' ? (tx.category || 'Investasi') : (tx.category || 'Tanpa Kategori');
+    for (const tx of monthlyExpenseTransactions) {
+      const categoryName = tx.category || 'Tanpa Kategori';
       map.set(categoryName, (map.get(categoryName) || 0) + (Number(tx.amount) || 0));
     }
     return map;
-  }, [monthlySpendingTransactions]);
+  }, [monthlyExpenseTransactions]);
 
   const totalAllocated = useMemo(
     () => allocations.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0),
     [allocations]
   );
 
-  const totalSpent = useMemo(
-    () => monthlySpendingTransactions.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0),
-    [monthlySpendingTransactions]
+  const expenseBudgetValue = parseFloat(expenseBudget) || 0;
+
+  const totalExpenseSpent = useMemo(
+    () => monthlyExpenseTransactions.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0),
+    [monthlyExpenseTransactions]
   );
 
+  const totalInvestmentSpent = useMemo(
+    () => monthlyInvestmentTransactions.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0),
+    [monthlyInvestmentTransactions]
+  );
+
+  const totalSpent = totalExpenseSpent + totalInvestmentSpent;
+
   const remainingToAllocate = totalIncome - totalAllocated;
-  const varianceAgainstAllocation = totalAllocated - totalSpent;
+  const expenseBudgetRemaining = expenseBudgetValue - totalAllocated;
+  const varianceAgainstAllocation = totalAllocated - totalExpenseSpent;
+  const varianceAgainstExpenseBudget = expenseBudgetValue - totalExpenseSpent;
 
   useEffect(() => {
     if (!userId || !appId) return;
@@ -98,6 +118,7 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
 
         if (!snapshot.exists()) {
           setSalaries([createEmptySalarySource()]);
+          setExpenseBudget('');
           setSelectedWallet('');
           setAllocations([]);
           setLastSavedAt(null);
@@ -123,6 +144,7 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
           : [];
 
         setSalaries(loadedSalaries.length > 0 ? loadedSalaries : [createEmptySalarySource()]);
+        setExpenseBudget(data.expenseBudget !== undefined && data.expenseBudget !== null ? String(data.expenseBudget) : '');
         setSelectedWallet(data.selectedWallet || '');
         setAllocations(loadedAllocations);
         setLastSavedAt(data.updatedAt?.toDate?.() || null);
@@ -157,6 +179,7 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
         const payload = {
           monthKey: selectedMonth,
           selectedWallet,
+          expenseBudget: parseFloat(expenseBudget) || 0,
           salarySources: salaries
             .map(item => ({ source: item.source || '', amount: parseFloat(item.amount) || 0 }))
             .filter(item => item.source || item.amount > 0),
@@ -182,7 +205,7 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
-  }, [salaryDocRef, selectedMonth, selectedWallet, salaries, allocations, appId, userId, isMonthLoading]);
+  }, [salaryDocRef, selectedMonth, selectedWallet, salaryTotal, expenseBudget, salaries, allocations, appId, userId, isMonthLoading]);
 
   const handleAddSalarySource = () => setSalaries(prev => [...prev, createEmptySalarySource()]);
 
@@ -225,6 +248,7 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
   const handleResetCurrentMonth = () => {
     if (!confirm(`Reset semua input untuk ${monthLabel(selectedMonth)}?`)) return;
     setSalaries([createEmptySalarySource()]);
+    setExpenseBudget('');
     setSelectedWallet('');
     setAllocations([]);
   };
@@ -250,8 +274,8 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
 
       const prevSpentByCategory = (transactions || []).reduce((map, tx) => {
         if (!tx?.date || toMonthKey(tx.date) !== fromMonth) return map;
-        if (tx.type !== 'expense' && tx.type !== 'investment') return map;
-        const key = tx.type === 'investment' ? (tx.category || 'Investasi') : (tx.category || 'Tanpa Kategori');
+        if (tx.type !== 'expense') return map;
+        const key = tx.category || 'Tanpa Kategori';
         map.set(key, (map.get(key) || 0) + (Number(tx.amount) || 0));
         return map;
       }, new Map());
@@ -294,6 +318,7 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
       });
 
       if (!selectedWallet && previousData.selectedWallet) setSelectedWallet(previousData.selectedWallet);
+      if (!expenseBudget && previousData.expenseBudget) setExpenseBudget(String(previousData.expenseBudget));
 
       alert(`Sisa alokasi dari ${monthLabel(fromMonth)} berhasil ditambahkan.`);
     } catch (error) {
@@ -390,6 +415,28 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
               {wallets.map(w => <option key={w.id} value={w.id}>{w.icon} {w.name}</option>)}
             </select>
           </div>
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Alokasi Expenses Bulanan (di luar Investment)</label>
+            <input
+              type="number"
+              value={expenseBudget}
+              onChange={(e) => setExpenseBudget(e.target.value)}
+              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white dark:bg-gray-700 dark:text-white font-semibold"
+              placeholder="0"
+              min="0"
+            />
+          </div>
+          <div className="flex items-end">
+            <div className="w-full p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold mb-1">BUDGET EXPENSES</p>
+              <p className="text-xl font-bold text-blue-700 dark:text-blue-300">{fmt(expenseBudgetValue)}</p>
+              <p className={`text-xs mt-1 ${varianceAgainstExpenseBudget >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                {varianceAgainstExpenseBudget >= 0
+                  ? `Sisa budget expenses ${fmt(varianceAgainstExpenseBudget)}`
+                  : `Expenses melebihi budget ${fmt(Math.abs(varianceAgainstExpenseBudget))}`}
+              </p>
+            </div>
+          </div>
           <div className="flex items-end">
             <div className="w-full p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
               <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mb-1">INPUT MANUAL</p>
@@ -400,7 +447,7 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
         </div>
       </div>
 
-      {(totalIncome > 0 || allocations.length > 0 || totalSpent > 0) && (
+      {(totalIncome > 0 || allocations.length > 0 || totalSpent > 0 || expenseBudgetValue > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
             <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">TOTAL PENDAPATAN</p>
@@ -408,21 +455,21 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">manual + transaksi income</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">TOTAL ALOKASI</p>
-            <h3 className="text-2xl font-bold text-purple-600 dark:text-purple-400">{fmt(totalAllocated)}</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{totalIncome > 0 ? ((totalAllocated / totalIncome) * 100).toFixed(1) : 0}% dari pendapatan</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">BUDGET EXPENSES</p>
+            <h3 className="text-2xl font-bold text-purple-600 dark:text-purple-400">{fmt(expenseBudgetValue)}</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{totalIncome > 0 ? ((expenseBudgetValue / totalIncome) * 100).toFixed(1) : 0}% dari pendapatan</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">TOTAL PENGELUARAN</p>
-            <h3 className="text-2xl font-bold text-amber-600 dark:text-amber-400">{fmt(totalSpent)}</h3>
-            <p className={`text-xs mt-1 ${varianceAgainstAllocation >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-              {varianceAgainstAllocation >= 0 ? `Masih sisa alokasi ${fmt(varianceAgainstAllocation)}` : `Melebihi alokasi ${fmt(Math.abs(varianceAgainstAllocation))}`}
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">EXPENSES TERPAKAI</p>
+            <h3 className="text-2xl font-bold text-amber-600 dark:text-amber-400">{fmt(totalExpenseSpent)}</h3>
+            <p className={`text-xs mt-1 ${varianceAgainstExpenseBudget >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+              {varianceAgainstExpenseBudget >= 0 ? `Sisa budget ${fmt(varianceAgainstExpenseBudget)}` : `Melebihi budget ${fmt(Math.abs(varianceAgainstExpenseBudget))}`}
             </p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">SISA UNTUK DIALOKASI</p>
-            <h3 className={`text-2xl font-bold ${remainingToAllocate >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>{fmt(remainingToAllocate)}</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{allocations.length} kategori diatur</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">INVESTMENT TERPAKAI</p>
+            <h3 className="text-2xl font-bold text-blue-600 dark:text-blue-400">{fmt(totalInvestmentSpent)}</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">di luar budget expenses</p>
           </div>
         </div>
       )}
@@ -431,13 +478,17 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
         <div className="p-4 border-b dark:border-gray-700">
           <div className="flex justify-between items-center">
             <h3 className="font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2">
-              <BarChart3 size={18} className="text-blue-500"/> Alokasi vs Realisasi
+              <BarChart3 size={18} className="text-blue-500"/> Breakdown Expenses per Kategori
             </h3>
             <button onClick={handleAddAllocation} disabled={!selectedWallet} className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex gap-2 items-center transition-colors">
               <Plus size={16}/> Tambah Alokasi
             </button>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Pengeluaran yang dihitung: expense, subscription otomatis (expense), dan investment.</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Realisasi kategori dihitung dari transaksi bertipe expense (termasuk subscription otomatis). Investment dihitung terpisah.</p>
+          <div className="mt-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 text-xs">
+            <p className="font-semibold text-blue-700 dark:text-blue-300">Sisa budget untuk dibagi ke kategori: <span className={expenseBudgetRemaining >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}>{fmt(expenseBudgetRemaining)}</span></p>
+            <p className="text-blue-600 dark:text-blue-400 mt-1">Total alokasi kategori: {fmt(totalAllocated)} dari budget expenses {fmt(expenseBudgetValue)}</p>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -478,7 +529,7 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-2">
-                      <input type="number" value={totalIncome > 0 ? (((parseFloat(alloc.amount) || 0) / totalIncome) * 100).toFixed(1) : '0.0'} onChange={(e) => handleUpdateAllocation(alloc.id, 'percentage', e.target.value)} className="w-20 p-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white text-sm font-semibold" step="0.1" min="0" max="100"/>
+                      <input type="number" value={expenseBudgetValue > 0 ? (((parseFloat(alloc.amount) || 0) / expenseBudgetValue) * 100).toFixed(1) : '0.0'} onChange={(e) => handleUpdateAllocation(alloc.id, 'percentage', e.target.value)} className="w-20 p-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white text-sm font-semibold" step="0.1" min="0" max="100"/>
                       <span className="text-gray-500 dark:text-gray-400">%</span>
                     </div>
                   </td>
@@ -509,7 +560,7 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
           <div className="p-4 bg-red-50 dark:bg-red-900/20 border-t border-red-200 dark:border-red-800 flex gap-3">
             <AlertTriangle className="text-red-600 dark:text-red-400 shrink-0" size={20}/>
             <div>
-              <p className="text-sm font-semibold text-red-700 dark:text-red-300">Perhatian: Pengeluaran bulan ini sudah melebihi total alokasi.</p>
+              <p className="text-sm font-semibold text-red-700 dark:text-red-300">Perhatian: Realisasi expenses kategori sudah melebihi total alokasi kategori.</p>
               <p className="text-xs text-red-600 dark:text-red-300 mt-1">Selisih over-budget {fmt(Math.abs(varianceAgainstAllocation))}.</p>
             </div>
           </div>
@@ -541,16 +592,16 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
             </h3>
             <div className="space-y-3 text-sm">
               <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-100 dark:border-amber-800">
-                <p className="font-semibold text-amber-900 dark:text-amber-300">Pengeluaran Terkategori</p>
-                <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">{monthlySpendingTransactions.length} transaksi tercatat</p>
+                <p className="font-semibold text-amber-900 dark:text-amber-300">Expenses Terkategori</p>
+                <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">{monthlyExpenseTransactions.length} transaksi expense tercatat</p>
               </div>
               <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
                 <p className="font-semibold text-blue-900 dark:text-blue-300">Sisa Alokasi Kategori</p>
                 <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">{fmt(Math.max(varianceAgainstAllocation, 0))}</p>
               </div>
               <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800">
-                <p className="font-semibold text-purple-900 dark:text-purple-300">Over-budget</p>
-                <p className="text-xs text-purple-700 dark:text-purple-400 mt-1">{fmt(Math.max(totalSpent - totalAllocated, 0))}</p>
+                <p className="font-semibold text-purple-900 dark:text-purple-300">Investment Bulan Ini</p>
+                <p className="text-xs text-purple-700 dark:text-purple-400 mt-1">{fmt(totalInvestmentSpent)}</p>
               </div>
             </div>
           </div>
