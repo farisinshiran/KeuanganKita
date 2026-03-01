@@ -15,7 +15,7 @@ export const NAV_ITEMS = [
   { id: 'education-fund',          icon: <GraduationCap size={20}/>,  label: 'Dana Pendidikan' },
   { id: 'income-diversification',  icon: <BarChart3 size={20}/>,      label: 'Diversifikasi Pendapatan' },
   { id: 'salary-slip-archive',     icon: <ScanLine size={20}/>,       label: 'Arsip Slip Gaji' },
-  { id: 'salary-allocator',        icon: <DollarSign size={20}/>,     label: 'Alokasi Gaji' },
+  { id: 'salary-allocator',        icon: <DollarSign size={20}/>,     label: 'Kontrol Bulanan' },
   { id: 'zakat',                   icon: <Heart size={20}/>,          label: 'Kalkulator Zakat' },
   { id: 'categories',              icon: <Settings size={20}/>,       label: 'Kategori' },
 ];

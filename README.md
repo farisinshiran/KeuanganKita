@@ -66,27 +66,25 @@
 - **Harga Emas Real-Time**: Fetch harga emas terkini dari API eksternal
 - **Custom Investment Types**: Buat tipe investasi sesuai kebutuhan
 
-### � Kalkulator Pengalokasian Gaji
-- **Multiple Salary Sources**: 
-  - Input gaji dari berbagai sumber (Gaji Utama, Bonus, Sampingan, dll)
-  - Tambah/hapus sumber gaji sesuai kebutuhan
-  - Auto-calculate total gaji dari semua sumber
-- **Input Gaji & Rekening**: Masukkan gaji dan pilih rekening default
-- **Alokasi Fleksibel**: Input alokasi dengan nominal atau persentase (auto-calculate keduanya)
-- **Real-time Summary**: 
-  - Total Dialokasikan
-  - Sisa Gaji
-  - Jumlah Kategori Teralokasi
-- **Visualisasi Pie Chart**: Lihat distribusi alokasi gaji secara visual
-- **Auto-Save State**: Data tersimpan otomatis ketika berpindah menu
-- **Template System**: 
-  - Simpan konfigurasi alokasi sebagai template
-  - Load template untuk bulan berikutnya
-  - Kelola multiple templates
-- **Apply to Budget**: Aplikasikan alokasi langsung sebagai budget limit kategori dengan satu klik
-- **Fitur Reset**: Reset semua isian untuk memulai dari awal
-- **Saran Alokasi**: Panduan alokasi ideal (60% primer, 30% sekunder, 10% investasi)
-- **Alert System**: Peringatan jika total alokasi melebihi gaji
+### � Kontrol Pengeluaran Bulanan
+- **Fokus per Bulan**:
+  - Pilih periode bulan aktif untuk input dan monitoring
+  - Data setiap bulan tersimpan terpisah agar histori tetap rapi
+- **Input Pendapatan Terpadu**:
+  - Input manual dari beberapa sumber pendapatan
+  - Digabung dengan realisasi transaksi `income` bulan yang sama
+- **Alokasi per Kategori per Bulan**:
+  - Set alokasi berdasarkan kategori pengeluaran
+  - Input bisa lewat nominal atau persentase dari total pendapatan bulan itu
+- **Monitoring Alokasi vs Realisasi**:
+  - Realisasi menghitung transaksi `expense`, langganan otomatis, dan `investment`
+  - Tabel status per kategori: aman, pas, atau melebihi alokasi
+- **Carry-over Manual**:
+  - Bawa sisa alokasi dari bulan sebelumnya hanya saat pengguna memilih
+- **Auto-Save Firestore**:
+  - Perubahan tersimpan otomatis per bulan
+- **Visualisasi Pie Chart**: Lihat distribusi alokasi kategori secara visual
+- **Fitur Reset Bulanan**: Reset isian untuk bulan terpilih tanpa mempengaruhi bulan lain
 
 ### �📝 Zakat Calculator
 - **Perhitungan Zakat**: Hitung zakat berdasarkan jenis investasi (emas, saham, reksadana)

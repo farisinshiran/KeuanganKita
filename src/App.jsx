@@ -281,7 +281,7 @@ export default function App() {
           {activeTab === 'education-fund'         && <EducationFundView         userId={uid} appId={appId} fmt={fmt} />}
           {activeTab === 'income-diversification' && <IncomeDiversificationView userId={uid} appId={appId} fmt={fmt} transactions={transactions} />}
           {activeTab === 'salary-slip-archive'    && <SalarySlipArchiveView     userId={uid} appId={appId} fmt={fmt} />}
-          {activeTab === 'salary-allocator'       && <SalaryAllocatorView       categories={categories} wallets={wBals} userId={uid} appId={appId} fmt={fmt} />}
+          {activeTab === 'salary-allocator'       && <SalaryAllocatorView       categories={categories} wallets={wBals} transactions={transactions} userId={uid} appId={appId} fmt={fmt} />}
           {activeTab === 'zakat'                  && <ZakatView                 summary={summary} investments={investments} fmt={fmt} />}
           {activeTab === 'categories'             && <CategoryView              categories={categories} userId={uid} appId={appId} fmt={fmt} />}
 

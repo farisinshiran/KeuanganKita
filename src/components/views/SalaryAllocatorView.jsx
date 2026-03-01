@@ -1,193 +1,357 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Plus, Save, Trash2, RefreshCw, Target, DollarSign, AlertTriangle, CheckCircle, Briefcase, BarChart3 } from 'lucide-react';
-import { doc, updateDoc } from 'firebase/firestore';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { Plus, Trash2, RefreshCw, Target, DollarSign, AlertTriangle, CheckCircle, CalendarDays, ArrowLeftRight, BarChart3 } from 'lucide-react';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip, Legend } from 'recharts';
 
-const SalaryAllocatorView = ({ categories, wallets, userId, appId, fmt }) => {
-  const [salaries, setSalaries] = useState([{ id: Date.now(), source: '', amount: '' }]);
+const COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6366F1'];
+
+const createId = () => `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+const createEmptySalarySource = () => ({ id: createId(), source: '', amount: '' });
+const currentMonthKey = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+};
+const toMonthKey = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+const monthLabel = (monthKey) => {
+  const [year, month] = monthKey.split('-').map(Number);
+  return new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(year, (month || 1) - 1, 1));
+};
+const previousMonthKey = (monthKey) => {
+  const [year, month] = monthKey.split('-').map(Number);
+  const date = new Date(year, (month || 1) - 2, 1);
+  return toMonthKey(date);
+};
+
+const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId, fmt }) => {
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthKey());
+  const [salaries, setSalaries] = useState([createEmptySalarySource()]);
   const [allocations, setAllocations] = useState([]);
   const [selectedWallet, setSelectedWallet] = useState('');
-  const [savedTemplates, setSavedTemplates] = useState([]);
+  const [isMonthLoading, setIsMonthLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState(null);
 
-  const totalSalary = useMemo(() => {
-    return salaries.reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0);
-  }, [salaries]);
+  const isHydratingRef = useRef(false);
+  const saveTimerRef = useRef(null);
+
+  const salaryDocRef = useMemo(
+    () => doc(db, 'artifacts', appId, 'users', userId, 'monthly_controls', selectedMonth),
+    [appId, userId, selectedMonth]
+  );
+
+  const salaryTotal = useMemo(
+    () => salaries.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0),
+    [salaries]
+  );
+
+  const incomeFromTransactions = useMemo(
+    () => (transactions || []).reduce((sum, tx) => {
+      if (tx?.type !== 'income' || !tx?.date || toMonthKey(tx.date) !== selectedMonth) return sum;
+      return sum + (Number(tx.amount) || 0);
+    }, 0),
+    [transactions, selectedMonth]
+  );
+
+  const totalIncome = salaryTotal + incomeFromTransactions;
+
+  const monthlySpendingTransactions = useMemo(
+    () => (transactions || []).filter(tx => {
+      if (!tx?.date || toMonthKey(tx.date) !== selectedMonth) return false;
+      return tx.type === 'expense' || tx.type === 'investment';
+    }),
+    [transactions, selectedMonth]
+  );
+
+  const spendingByCategory = useMemo(() => {
+    const map = new Map();
+    for (const tx of monthlySpendingTransactions) {
+      const categoryName = tx.type === 'investment' ? (tx.category || 'Investasi') : (tx.category || 'Tanpa Kategori');
+      map.set(categoryName, (map.get(categoryName) || 0) + (Number(tx.amount) || 0));
+    }
+    return map;
+  }, [monthlySpendingTransactions]);
+
+  const totalAllocated = useMemo(
+    () => allocations.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0),
+    [allocations]
+  );
+
+  const totalSpent = useMemo(
+    () => monthlySpendingTransactions.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0),
+    [monthlySpendingTransactions]
+  );
+
+  const remainingToAllocate = totalIncome - totalAllocated;
+  const varianceAgainstAllocation = totalAllocated - totalSpent;
 
   useEffect(() => {
-    const savedState = localStorage.getItem(`salaryState_${userId}`);
-    if (savedState) {
+    if (!userId || !appId) return;
+    let cancelled = false;
+
+    const loadMonthControl = async () => {
+      setIsMonthLoading(true);
+      isHydratingRef.current = true;
       try {
-        const { salaries: sal, selectedWallet: w, allocations: a } = JSON.parse(savedState);
-        if (sal && Array.isArray(sal)) {
-          setSalaries(sal.length > 0 ? sal : [{ id: Date.now(), source: '', amount: '' }]);
+        const snapshot = await getDoc(salaryDocRef);
+        if (cancelled) return;
+
+        if (!snapshot.exists()) {
+          setSalaries([createEmptySalarySource()]);
+          setSelectedWallet('');
+          setAllocations([]);
+          setLastSavedAt(null);
+          return;
         }
-        setSelectedWallet(w || '');
-        setAllocations(a || []);
-      } catch (e) { console.error('Error loading state:', e); }
-    }
-    const templates = localStorage.getItem(`salaryTemplates_${userId}`);
-    if (templates) {
-      try { setSavedTemplates(JSON.parse(templates)); } catch (e) { console.error('Error loading templates:', e); }
-    }
-  }, [userId]);
+
+        const data = snapshot.data();
+        const loadedSalaries = Array.isArray(data.salarySources)
+          ? data.salarySources.map(item => ({
+              id: createId(),
+              source: item.source || '',
+              amount: String(item.amount || ''),
+            }))
+          : [createEmptySalarySource()];
+
+        const loadedAllocations = Array.isArray(data.allocations)
+          ? data.allocations.map(item => ({
+              id: createId(),
+              category: item.category || '',
+              amount: String(item.amount || ''),
+              wallet: item.wallet || data.selectedWallet || '',
+            }))
+          : [];
+
+        setSalaries(loadedSalaries.length > 0 ? loadedSalaries : [createEmptySalarySource()]);
+        setSelectedWallet(data.selectedWallet || '');
+        setAllocations(loadedAllocations);
+        setLastSavedAt(data.updatedAt?.toDate?.() || null);
+      } catch (error) {
+        console.error('Error loading monthly control:', error);
+        alert(`Gagal memuat data bulan ${monthLabel(selectedMonth)}: ${error.message}`);
+      } finally {
+        if (!cancelled) {
+          setIsMonthLoading(false);
+          setTimeout(() => {
+            isHydratingRef.current = false;
+          }, 0);
+        }
+      }
+    };
+
+    loadMonthControl();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [salaryDocRef, selectedMonth, userId, appId]);
 
   useEffect(() => {
-    if (userId) {
-      localStorage.setItem(`salaryState_${userId}`, JSON.stringify({ salaries, selectedWallet, allocations }));
-    }
-  }, [salaries, selectedWallet, allocations, userId]);
+    if (!userId || !appId || isMonthLoading || isHydratingRef.current) return;
 
-  const saveAllocations = (data) => setAllocations(data);
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
 
-  const handleAddSalarySource = () => setSalaries([...salaries, { id: Date.now(), source: '', amount: '' }]);
-  const handleUpdateSalarySource = (id, field, value) => setSalaries(salaries.map(s => s.id === id ? { ...s, [field]: value } : s));
+    saveTimerRef.current = setTimeout(async () => {
+      try {
+        setIsSaving(true);
+        const payload = {
+          monthKey: selectedMonth,
+          selectedWallet,
+          salarySources: salaries
+            .map(item => ({ source: item.source || '', amount: parseFloat(item.amount) || 0 }))
+            .filter(item => item.source || item.amount > 0),
+          allocations: allocations
+            .map(item => ({
+              category: item.category || '',
+              amount: parseFloat(item.amount) || 0,
+              wallet: item.wallet || selectedWallet || '',
+            }))
+            .filter(item => item.category || item.amount > 0),
+          updatedAt: serverTimestamp(),
+        };
+
+        await setDoc(salaryDocRef, payload, { merge: true });
+        setLastSavedAt(new Date());
+      } catch (error) {
+        console.error('Error saving monthly control:', error);
+      } finally {
+        setIsSaving(false);
+      }
+    }, 600);
+
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, [salaryDocRef, selectedMonth, selectedWallet, salaries, allocations, appId, userId, isMonthLoading]);
+
+  const handleAddSalarySource = () => setSalaries(prev => [...prev, createEmptySalarySource()]);
+
+  const handleUpdateSalarySource = (id, field, value) => {
+    setSalaries(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+  };
+
   const handleDeleteSalarySource = (id) => {
-    if (salaries.length === 1) { alert('Minimal harus ada 1 sumber gaji'); return; }
-    setSalaries(salaries.filter(s => s.id !== id));
+    if (salaries.length === 1) {
+      alert('Minimal harus ada 1 sumber pendapatan manual.');
+      return;
+    }
+    setSalaries(prev => prev.filter(item => item.id !== id));
   };
 
   const handleAddAllocation = () => {
-    if (totalSalary === 0 || !selectedWallet) { alert('Masukkan gaji dan pilih rekening terlebih dahulu'); return; }
-    saveAllocations([...allocations, { id: Date.now(), category: '', amount: '', percentage: 0, wallet: selectedWallet }]);
+    if (!selectedWallet) {
+      alert('Pilih rekening default terlebih dahulu.');
+      return;
+    }
+    setAllocations(prev => [...prev, { id: createId(), category: '', amount: '', wallet: selectedWallet }]);
   };
 
   const handleUpdateAllocation = (id, field, value) => {
-    const updated = allocations.map(a => {
-      if (a.id !== id) return a;
-      const newA = { ...a };
-      if (field === 'amount') {
-        newA.amount = value;
-        newA.percentage = totalSalary && value !== '' ? ((parseFloat(value) || 0) / totalSalary) * 100 : 0;
-      } else if (field === 'percentage') {
-        newA.percentage = parseFloat(value) || 0;
-        newA.amount = totalSalary ? ((parseFloat(value) || 0) / 100 * totalSalary).toString() : '';
-      } else {
-        newA[field] = value;
+    setAllocations(prev => prev.map(item => {
+      if (item.id !== id) return item;
+      if (field === 'percentage') {
+        const pct = parseFloat(value) || 0;
+        const amount = totalIncome > 0 ? (pct / 100) * totalIncome : 0;
+        return { ...item, amount: String(Math.max(amount, 0)) };
       }
-      return newA;
-    });
-    saveAllocations(updated);
+      return { ...item, [field]: value };
+    }));
   };
 
-  const handleDeleteAllocation = (id) => saveAllocations(allocations.filter(a => a.id !== id));
-
-  const handleReset = () => {
-    if (confirm('Reset semua alokasi? Data akan dihapus.')) {
-      setSalaries([{ id: Date.now(), source: '', amount: '' }]);
-      setSelectedWallet('');
-      setAllocations([]);
-    }
+  const handleDeleteAllocation = (id) => {
+    setAllocations(prev => prev.filter(item => item.id !== id));
   };
 
-  const handleSaveTemplate = () => {
-    if (totalSalary === 0 || allocations.length === 0) { alert('Masukkan gaji dan minimal 1 alokasi terlebih dahulu'); return; }
-    const name = prompt('Nama template (contoh: Gaji Bulanan Januari):');
-    if (!name) return;
-    const template = { id: Date.now(), name, salaries, selectedWallet, allocations, createdAt: new Date().toISOString() };
-    const updated = [...savedTemplates, template];
-    setSavedTemplates(updated);
-    localStorage.setItem(`salaryTemplates_${userId}`, JSON.stringify(updated));
-    alert(`Template "${name}" berhasil disimpan!`);
+  const handleResetCurrentMonth = () => {
+    if (!confirm(`Reset semua input untuk ${monthLabel(selectedMonth)}?`)) return;
+    setSalaries([createEmptySalarySource()]);
+    setSelectedWallet('');
+    setAllocations([]);
   };
 
-  const handleLoadTemplate = (template) => {
-    if (confirm(`Load template "${template.name}"?`)) {
-      if (template.salaries && Array.isArray(template.salaries)) {
-        setSalaries(template.salaries.map(s => ({ ...s, id: Date.now() + Math.random() })));
-      } else if (template.salary) {
-        setSalaries([{ id: Date.now(), source: 'Gaji Utama', amount: template.salary }]);
-      }
-      setSelectedWallet(template.selectedWallet);
-      setAllocations(template.allocations.map(a => ({ ...a, id: Date.now() + Math.random() })));
-    }
-  };
+  const handleCarryOverFromPreviousMonth = async () => {
+    const fromMonth = previousMonthKey(selectedMonth);
+    if (!confirm(`Bawa sisa alokasi dari ${monthLabel(fromMonth)} ke ${monthLabel(selectedMonth)}?`)) return;
 
-  const handleDeleteTemplate = (id) => {
-    if (confirm('Hapus template ini?')) {
-      const updated = savedTemplates.filter(t => t.id !== id);
-      setSavedTemplates(updated);
-      localStorage.setItem(`salaryTemplates_${userId}`, JSON.stringify(updated));
-    }
-  };
-
-  const handleApplyToBudget = async () => {
-    if (allocations.length === 0) { alert('Tidak ada alokasi untuk diaplikasikan ke budget'); return; }
-    if (!confirm('Aplikasikan alokasi ini sebagai budget limit untuk kategori terkait?')) return;
     try {
-      let successCount = 0;
-      for (const alloc of allocations) {
-        if (alloc.category && alloc.amount) {
-          const category = (categories.raw || []).find(c => c.name === alloc.category && c.type === 'expense');
-          if (category) {
-            await updateDoc(doc(db, 'artifacts', appId, 'users', userId, 'categories', category.id), { budget: parseFloat(alloc.amount) || 0 });
-            successCount++;
+      const previousRef = doc(db, 'artifacts', appId, 'users', userId, 'monthly_controls', fromMonth);
+      const previousSnapshot = await getDoc(previousRef);
+      if (!previousSnapshot.exists()) {
+        alert(`Tidak ada data alokasi pada ${monthLabel(fromMonth)}.`);
+        return;
+      }
+
+      const previousData = previousSnapshot.data();
+      const previousAllocations = Array.isArray(previousData.allocations) ? previousData.allocations : [];
+      if (previousAllocations.length === 0) {
+        alert(`Bulan ${monthLabel(fromMonth)} tidak memiliki alokasi.`);
+        return;
+      }
+
+      const prevSpentByCategory = (transactions || []).reduce((map, tx) => {
+        if (!tx?.date || toMonthKey(tx.date) !== fromMonth) return map;
+        if (tx.type !== 'expense' && tx.type !== 'investment') return map;
+        const key = tx.type === 'investment' ? (tx.category || 'Investasi') : (tx.category || 'Tanpa Kategori');
+        map.set(key, (map.get(key) || 0) + (Number(tx.amount) || 0));
+        return map;
+      }, new Map());
+
+      const carryItems = previousAllocations
+        .map(item => {
+          const amount = Number(item.amount) || 0;
+          const spent = prevSpentByCategory.get(item.category || 'Tanpa Kategori') || 0;
+          const left = Math.max(amount - spent, 0);
+          return {
+            category: item.category || '',
+            amount: left,
+            wallet: item.wallet || previousData.selectedWallet || selectedWallet || '',
+          };
+        })
+        .filter(item => item.category && item.amount > 0);
+
+      if (carryItems.length === 0) {
+        alert(`Tidak ada sisa alokasi yang bisa dibawa dari ${monthLabel(fromMonth)}.`);
+        return;
+      }
+
+      setAllocations(prev => {
+        const merged = [...prev.map(item => ({ ...item }))];
+        for (const carry of carryItems) {
+          const index = merged.findIndex(item => item.category === carry.category);
+          if (index >= 0) {
+            const currentAmount = parseFloat(merged[index].amount) || 0;
+            merged[index].amount = String(currentAmount + carry.amount);
+          } else {
+            merged.push({
+              id: createId(),
+              category: carry.category,
+              amount: String(carry.amount),
+              wallet: carry.wallet,
+            });
           }
         }
-      }
-      alert(`Budget berhasil diaplikasikan ke ${successCount} kategori!`);
+        return merged;
+      });
+
+      if (!selectedWallet && previousData.selectedWallet) setSelectedWallet(previousData.selectedWallet);
+
+      alert(`Sisa alokasi dari ${monthLabel(fromMonth)} berhasil ditambahkan.`);
     } catch (error) {
-      console.error('Error applying budget:', error);
-      alert('Gagal mengaplikasikan budget: ' + error.message);
+      console.error('Error applying manual carry-over:', error);
+      alert(`Gagal carry-over manual: ${error.message}`);
     }
   };
 
-  const totalAllocated = allocations.reduce((sum, a) => sum + (parseFloat(a.amount) || 0), 0);
-  const remaining = totalSalary - totalAllocated;
-  const remainingPercent = totalSalary ? (remaining / totalSalary) * 100 : 0;
+  const statusForAllocation = (allocationAmount, spentAmount) => {
+    if (allocationAmount <= 0) return { label: 'Belum Diatur', className: 'text-gray-500 dark:text-gray-400' };
+    if (spentAmount > allocationAmount) return { label: 'Melebihi', className: 'text-red-600 dark:text-red-400' };
+    if (spentAmount === allocationAmount) return { label: 'Pas', className: 'text-amber-600 dark:text-amber-400' };
+    return { label: 'Aman', className: 'text-emerald-600 dark:text-emerald-400' };
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
           <DollarSign size={28} className="text-emerald-600 dark:text-emerald-400"/>
-          Kalkulator Pengalokasian Gaji
+          Kontrol Pengeluaran Bulanan
         </h2>
-        <div className="flex gap-2 flex-wrap">
-          <button onClick={handleApplyToBudget} disabled={allocations.length === 0} className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex gap-2 items-center transition-colors">
-            <Target size={16}/> Apply ke Budget
+        <div className="flex gap-2 flex-wrap items-center">
+          <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm">
+            <CalendarDays size={16} className="text-gray-500 dark:text-gray-400"/>
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="bg-transparent outline-none text-gray-700 dark:text-gray-200"
+            />
+          </div>
+          <button onClick={handleCarryOverFromPreviousMonth} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex gap-2 items-center transition-colors">
+            <ArrowLeftRight size={16}/> Carry-over Manual
           </button>
-          <button onClick={handleSaveTemplate} disabled={totalSalary === 0 || allocations.length === 0} className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex gap-2 items-center transition-colors">
-            <Save size={16}/> Simpan Template
-          </button>
-          <button onClick={handleReset} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex gap-2 items-center transition-colors">
+          <button onClick={handleResetCurrentMonth} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex gap-2 items-center transition-colors">
             <RefreshCw size={16}/> Reset
           </button>
         </div>
       </div>
 
-      {savedTemplates.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-          <h3 className="font-bold text-gray-700 dark:text-gray-200 mb-3 flex items-center gap-2">
-            <Briefcase size={18} className="text-purple-500"/> Template Tersimpan
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {savedTemplates.map(template => (
-              <div key={template.id} className="p-3 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{template.name}</h4>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {template.salaries ? fmt(template.salaries.reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0)) : fmt(template.salary || 0)}
-                    </p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">{template.allocations.length} alokasi</p>
-                  </div>
-                  <button onClick={() => handleDeleteTemplate(template.id)} className="text-gray-300 hover:text-red-500 transition-colors">
-                    <Trash2 size={14}/>
-                  </button>
-                </div>
-                <button onClick={() => handleLoadTemplate(template)} className="w-full mt-2 bg-purple-600 hover:bg-purple-700 text-white text-xs py-1.5 rounded-lg transition-colors font-medium">
-                  Load Template
-                </button>
-              </div>
-            ))}
-          </div>
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Periode aktif</p>
+          <p className="font-bold text-gray-800 dark:text-gray-100">{monthLabel(selectedMonth)}</p>
         </div>
-      )}
+        <div className="text-right">
+          <p className="text-xs text-gray-500 dark:text-gray-400">Status simpan</p>
+          <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+            {isMonthLoading ? 'Memuat data bulan...' : isSaving ? 'Menyimpan perubahan...' : 'Tersimpan otomatis'}
+          </p>
+          {lastSavedAt && <p className="text-[11px] text-gray-400 dark:text-gray-500">{lastSavedAt.toLocaleTimeString('id-ID')}</p>}
+        </div>
+      </div>
 
       <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="font-semibold text-gray-700 dark:text-gray-200">Sumber Gaji</h3>
+          <h3 className="font-semibold text-gray-700 dark:text-gray-200">Input Pendapatan Bulan {monthLabel(selectedMonth)}</h3>
           <div className="flex items-center gap-3">
             <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
               <CheckCircle size={14}/> Auto-save aktif
@@ -202,7 +366,7 @@ const SalaryAllocatorView = ({ categories, wallets, userId, appId, fmt }) => {
           {salaries.map((sal, index) => (
             <div key={sal.id} className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
               <div className="space-y-1">
-                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400">Sumber Gaji #{index + 1}</label>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400">Sumber Pendapatan #{index + 1}</label>
                 <input type="text" value={sal.source} onChange={(e) => handleUpdateSalarySource(sal.id, 'source', e.target.value)} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white dark:bg-gray-800 dark:text-white text-sm" placeholder="Contoh: Gaji Utama, Bonus"/>
               </div>
               <div className="space-y-1">
@@ -228,31 +392,37 @@ const SalaryAllocatorView = ({ categories, wallets, userId, appId, fmt }) => {
           </div>
           <div className="flex items-end">
             <div className="w-full p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
-              <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mb-1">TOTAL GAJI</p>
-              <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">{fmt(totalSalary)}</p>
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mb-1">INPUT MANUAL</p>
+              <p className="text-xl font-bold text-emerald-700 dark:text-emerald-300">{fmt(salaryTotal)}</p>
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">+ Realisasi transaksi income: {fmt(incomeFromTransactions)}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {totalSalary > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {(totalIncome > 0 || allocations.length > 0 || totalSpent > 0) && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">TOTAL DIALOKASIKAN</p>
-            <h3 className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{fmt(totalAllocated)}</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{totalSalary > 0 ? ((totalAllocated / totalSalary) * 100).toFixed(1) : 0}%</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">TOTAL PENDAPATAN</p>
+            <h3 className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{fmt(totalIncome)}</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">manual + transaksi income</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">SISA GAJI</p>
-            <h3 className={`text-2xl font-bold ${remaining >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>{fmt(remaining)}</h3>
-            <p className={`text-xs mt-1 ${remaining >= 0 ? 'text-blue-500 dark:text-blue-400' : 'text-red-500 dark:text-red-400'}`}>
-              {remaining >= 0 ? `${remainingPercent.toFixed(1)}% tersedia` : `Kurang ${fmt(Math.abs(remaining))}`}
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">TOTAL ALOKASI</p>
+            <h3 className="text-2xl font-bold text-purple-600 dark:text-purple-400">{fmt(totalAllocated)}</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{totalIncome > 0 ? ((totalAllocated / totalIncome) * 100).toFixed(1) : 0}% dari pendapatan</p>
+          </div>
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">TOTAL PENGELUARAN</p>
+            <h3 className="text-2xl font-bold text-amber-600 dark:text-amber-400">{fmt(totalSpent)}</h3>
+            <p className={`text-xs mt-1 ${varianceAgainstAllocation >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+              {varianceAgainstAllocation >= 0 ? `Masih sisa alokasi ${fmt(varianceAgainstAllocation)}` : `Melebihi alokasi ${fmt(Math.abs(varianceAgainstAllocation))}`}
             </p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">ALOKASI ITEM</p>
-            <h3 className="text-2xl font-bold text-purple-600 dark:text-purple-400">{allocations.length}</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">kategori teralokasi</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">SISA UNTUK DIALOKASI</p>
+            <h3 className={`text-2xl font-bold ${remainingToAllocate >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>{fmt(remainingToAllocate)}</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{allocations.length} kategori diatur</p>
           </div>
         </div>
       )}
@@ -261,13 +431,13 @@ const SalaryAllocatorView = ({ categories, wallets, userId, appId, fmt }) => {
         <div className="p-4 border-b dark:border-gray-700">
           <div className="flex justify-between items-center">
             <h3 className="font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2">
-              <BarChart3 size={18} className="text-blue-500"/> Daftar Alokasi
+              <BarChart3 size={18} className="text-blue-500"/> Alokasi vs Realisasi
             </h3>
-            <button onClick={handleAddAllocation} disabled={totalSalary === 0 || !selectedWallet} className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex gap-2 items-center transition-colors">
+            <button onClick={handleAddAllocation} disabled={!selectedWallet} className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex gap-2 items-center transition-colors">
               <Plus size={16}/> Tambah Alokasi
             </button>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">💡 Tip: Input bisa dilakukan dengan nominal atau persentase. Sistem akan otomatis menghitung yang lainnya.</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Pengeluaran yang dihitung: expense, subscription otomatis (expense), dan investment.</p>
         </div>
 
         <div className="overflow-x-auto">
@@ -276,20 +446,26 @@ const SalaryAllocatorView = ({ categories, wallets, userId, appId, fmt }) => {
               <tr>
                 <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">Kategori</th>
                 <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">Rekening</th>
-                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">Nominal</th>
+                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">Alokasi</th>
                 <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">Persentase</th>
+                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">Realisasi</th>
+                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">Sisa</th>
+                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">Status</th>
                 <th className="p-4 w-20"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {allocations.length === 0 ? (
-                <tr><td colSpan="5" className="p-8 text-center text-gray-400 dark:text-gray-500">Belum ada alokasi</td></tr>
+                <tr><td colSpan="8" className="p-8 text-center text-gray-400 dark:text-gray-500">Belum ada alokasi</td></tr>
               ) : allocations.map(alloc => (
                 <tr key={alloc.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                   <td className="p-4">
                     <select value={alloc.category} onChange={(e) => handleUpdateAllocation(alloc.id, 'category', e.target.value)} className="w-full p-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white text-sm">
                       <option value="">Pilih Kategori...</option>
-                      {(categories.expense || []).map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                      {(categories.expense || []).map(cat => {
+                        const alreadyUsed = allocations.some(item => item.id !== alloc.id && item.category === cat);
+                        return <option key={cat} value={cat} disabled={alreadyUsed}>{cat}{alreadyUsed ? ' (sudah dipakai)' : ''}</option>;
+                      })}
                     </select>
                   </td>
                   <td className="p-4">
@@ -302,9 +478,21 @@ const SalaryAllocatorView = ({ categories, wallets, userId, appId, fmt }) => {
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-2">
-                      <input type="number" value={((alloc.percentage || 0)).toFixed(1)} onChange={(e) => handleUpdateAllocation(alloc.id, 'percentage', e.target.value)} className="w-20 p-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white text-sm font-semibold" step="0.1" min="0" max="100"/>
+                      <input type="number" value={totalIncome > 0 ? (((parseFloat(alloc.amount) || 0) / totalIncome) * 100).toFixed(1) : '0.0'} onChange={(e) => handleUpdateAllocation(alloc.id, 'percentage', e.target.value)} className="w-20 p-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white text-sm font-semibold" step="0.1" min="0" max="100"/>
                       <span className="text-gray-500 dark:text-gray-400">%</span>
                     </div>
+                  </td>
+                  <td className="p-4 font-semibold text-amber-600 dark:text-amber-400">{fmt(spendingByCategory.get(alloc.category || 'Tanpa Kategori') || 0)}</td>
+                  <td className={`p-4 font-semibold ${((parseFloat(alloc.amount) || 0) - (spendingByCategory.get(alloc.category || 'Tanpa Kategori') || 0)) >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>
+                    {fmt((parseFloat(alloc.amount) || 0) - (spendingByCategory.get(alloc.category || 'Tanpa Kategori') || 0))}
+                  </td>
+                  <td className="p-4">
+                    {(() => {
+                      const planned = parseFloat(alloc.amount) || 0;
+                      const spent = spendingByCategory.get(alloc.category || 'Tanpa Kategori') || 0;
+                      const status = statusForAllocation(planned, spent);
+                      return <span className={`text-xs font-bold ${status.className}`}>{status.label}</span>;
+                    })()}
                   </td>
                   <td className="p-4 text-center">
                     <button onClick={() => handleDeleteAllocation(alloc.id)} className="text-gray-300 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 transition-colors">
@@ -317,12 +505,12 @@ const SalaryAllocatorView = ({ categories, wallets, userId, appId, fmt }) => {
           </table>
         </div>
 
-        {allocations.length > 0 && remaining < 0 && (
+        {allocations.length > 0 && varianceAgainstAllocation < 0 && (
           <div className="p-4 bg-red-50 dark:bg-red-900/20 border-t border-red-200 dark:border-red-800 flex gap-3">
             <AlertTriangle className="text-red-600 dark:text-red-400 shrink-0" size={20}/>
             <div>
-              <p className="text-sm font-semibold text-red-700 dark:text-red-300">Perhatian: Total alokasi melebihi gaji!</p>
-              <p className="text-xs text-red-600 dark:text-red-300 mt-1">Kurang {fmt(Math.abs(remaining))} untuk seimbangkan alokasi.</p>
+              <p className="text-sm font-semibold text-red-700 dark:text-red-300">Perhatian: Pengeluaran bulan ini sudah melebihi total alokasi.</p>
+              <p className="text-xs text-red-600 dark:text-red-300 mt-1">Selisih over-budget {fmt(Math.abs(varianceAgainstAllocation))}.</p>
             </div>
           </div>
         )}
@@ -336,7 +524,7 @@ const SalaryAllocatorView = ({ categories, wallets, userId, appId, fmt }) => {
               <ResponsiveContainer width="100%" height={250}>
                 <RePieChart>
                   <Pie data={allocations.filter(a => a.amount).map(a => ({ name: a.category || 'Tanpa Kategori', value: parseFloat(a.amount) || 0 }))} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={2} dataKey="value">
-                    {allocations.map((_, i) => <Cell key={i} fill={['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6366F1'][i % 7]}/>)}
+                    {allocations.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]}/>)}
                   </Pie>
                   <ReTooltip formatter={(v) => fmt(v)} />
                   <Legend verticalAlign="bottom" />
@@ -349,20 +537,20 @@ const SalaryAllocatorView = ({ categories, wallets, userId, appId, fmt }) => {
 
           <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
             <h3 className="font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-              <Target size={18} className="text-amber-500"/> Saran Pengalokasian
+              <Target size={18} className="text-amber-500"/> Ringkasan Kontrol Bulan Ini
             </h3>
             <div className="space-y-3 text-sm">
               <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-100 dark:border-amber-800">
-                <p className="font-semibold text-amber-900 dark:text-amber-300">Kebutuhan Primer (60%)</p>
-                <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">{fmt(totalSalary * 0.6)}</p>
+                <p className="font-semibold text-amber-900 dark:text-amber-300">Pengeluaran Terkategori</p>
+                <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">{monthlySpendingTransactions.length} transaksi tercatat</p>
               </div>
               <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
-                <p className="font-semibold text-blue-900 dark:text-blue-300">Kebutuhan Sekunder (30%)</p>
-                <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">{fmt(totalSalary * 0.3)}</p>
+                <p className="font-semibold text-blue-900 dark:text-blue-300">Sisa Alokasi Kategori</p>
+                <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">{fmt(Math.max(varianceAgainstAllocation, 0))}</p>
               </div>
               <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800">
-                <p className="font-semibold text-purple-900 dark:text-purple-300">Investasi & Tabungan (10%)</p>
-                <p className="text-xs text-purple-700 dark:text-purple-400 mt-1">{fmt(totalSalary * 0.1)}</p>
+                <p className="font-semibold text-purple-900 dark:text-purple-300">Over-budget</p>
+                <p className="text-xs text-purple-700 dark:text-purple-400 mt-1">{fmt(Math.max(totalSpent - totalAllocated, 0))}</p>
               </div>
             </div>
           </div>
