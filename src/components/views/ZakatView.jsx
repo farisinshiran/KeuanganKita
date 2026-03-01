@@ -84,7 +84,7 @@ const ZakatView = ({ summary, investments, fmt }) => {
             )}
           </div>
           <div className="space-y-2">
-            <label className="text-xs text-amber-600 dark:text-amber-400 font-semibold uppercase">Update Harga Manual (Rp)</label>
+            <label className="text-xs text-amber-600 dark:text-amber-400 font-semibold uppercase">Ubah Harga Manual (Rp)</label>
             <div className="flex gap-2">
               <input
                 type="number"
@@ -98,7 +98,7 @@ const ZakatView = ({ summary, investments, fmt }) => {
                 disabled={!customGoldPrice}
                 className="bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400 text-white px-3 py-2.5 rounded-lg text-sm font-medium"
               >
-                Update
+                Terapkan
               </button>
             </div>
           </div>
@@ -110,7 +110,7 @@ const ZakatView = ({ summary, investments, fmt }) => {
                 disabled={loading}
                 className="text-xs mt-2 px-2 py-1 bg-amber-100 hover:bg-amber-200 dark:bg-amber-800 text-amber-700 dark:text-amber-300 rounded disabled:opacity-50 flex items-center gap-1"
               >
-                <RefreshCw size={12} className={loading ? 'animate-spin' : ''}/> Refresh
+                <RefreshCw size={12} className={loading ? 'animate-spin' : ''}/> Muat Ulang
               </button>
           </div>
         </div>

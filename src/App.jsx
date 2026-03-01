@@ -6,6 +6,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 // --- CONFIG & UTILS ---
 import { auth, db, appId, APP_VERSION } from './config/firebase';
 import { formatCurrency } from './utils/formatters';
+import { useI18n } from './i18n/I18nContext';
 
 // --- CUSTOM HOOK (all Firestore data) ---
 import { useAppData } from './hooks/useAppData';
@@ -32,11 +33,11 @@ const TransactionModal = lazy(() => import('./components/modals/TransactionModal
 const QuickAddModal    = lazy(() => import('./components/modals/QuickAddModal'));
 
 // --- Suspense fallback spinner ---
-const PageLoader = () => (
+const PageLoader = ({ text }) => (
   <div className="flex items-center justify-center w-full py-40">
     <div className="flex flex-col items-center gap-3">
       <div className="w-10 h-10 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
-      <p className="text-sm text-gray-400 dark:text-gray-500 animate-pulse">Memuat halaman…</p>
+      <p className="text-sm text-gray-400 dark:text-gray-500 animate-pulse">{text}</p>
     </div>
   </div>
 );
@@ -45,6 +46,7 @@ const PageLoader = () => (
 // MAIN APP
 // ============================================================
 export default function App() {
+  const { t } = useI18n();
   const [user, setUser]       = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [activeTab, setActiveTab]     = useState('dashboard');
@@ -194,7 +196,7 @@ export default function App() {
   // ── Guards ──────────────────────────────────────────────────
   if (authLoading) return (
     <div className="min-h-screen flex items-center justify-center dark:bg-gray-900 text-emerald-600 font-bold animate-pulse">
-      Memuat Dompet Keluarga…
+      {t('common.loadingApp')}
     </div>
   );
   if (!user) return <LoginPage onLogin={handleLogin} />;
@@ -213,7 +215,7 @@ export default function App() {
         >
           <div className="flex items-center gap-2">
             <RefreshCw size={20} className={pullDistance > 80 ? 'animate-spin' : ''} />
-            <span className="text-sm font-medium">{pullDistance > 80 ? 'Lepas untuk refresh…' : 'Tarik untuk refresh…'}</span>
+            <span className="text-sm font-medium">{pullDistance > 80 ? t('common.releaseToRefresh') : t('common.pullToRefresh')}</span>
           </div>
         </div>
       )}
@@ -221,7 +223,7 @@ export default function App() {
         <div className="fixed inset-0 z-[100] bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
             <RefreshCw size={32} className="text-emerald-600 animate-spin" />
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Memperbarui data…</p>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('common.refreshingData')}</p>
           </div>
         </div>
       )}
@@ -256,7 +258,7 @@ export default function App() {
         <div className="md:hidden flex justify-between items-center mb-6">
           <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
             <Wallet className="w-6 h-6" />
-            <h1 className="font-bold text-lg">Dompet Keluarga</h1>
+            <h1 className="font-bold text-lg">{t('common.appName')}</h1>
           </div>
           <div className="flex items-center gap-4">
             <button onClick={() => setPrivacyMode(p => !p)} className="text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400">
@@ -272,7 +274,7 @@ export default function App() {
         </div>
 
         {/* ── Page views (lazy-loaded inside Suspense) ── */}
-        <Suspense fallback={<PageLoader />}>
+        <Suspense fallback={<PageLoader text={t('common.loadingPage')} />}>
           {activeTab === 'dashboard'              && <DashboardView             summary={summary} transactions={transactions} investments={investments} categories={categories} investTypes={investTypes} setActiveTab={setActiveTab} fmt={fmt} privacyMode={privacyMode} darkMode={darkMode} />}
           {activeTab === 'transactions'           && <TransactionView           transactions={transactions} categories={categories} wallets={wBals} userId={uid} appId={appId} fmt={fmt} />}
           {activeTab === 'subscriptions'          && <SubscriptionView          subscriptions={subscriptions} wallets={wBals} userId={uid} appId={appId} fmt={fmt} />}
@@ -303,7 +305,7 @@ export default function App() {
           onClick={() => setIsQuickAddModalOpen(true)}
           className="group flex items-center gap-3 bg-white dark:bg-gray-800 hover:bg-emerald-50 dark:hover:bg-gray-700 border-2 border-emerald-600 text-emerald-600 px-4 py-3 rounded-full shadow-lg transition-all duration-300 hover:scale-105 active:scale-95 min-h-[48px]"
         >
-          <span className="text-sm font-semibold hidden sm:group-hover:inline-block animate-in fade-in slide-in-from-right-2 duration-200">Quick Add</span>
+          <span className="text-sm font-semibold hidden sm:group-hover:inline-block animate-in fade-in slide-in-from-right-2 duration-200">{t('common.quickAdd')}</span>
           <ScanLine size={22} strokeWidth={2.5} />
         </button>
         <button

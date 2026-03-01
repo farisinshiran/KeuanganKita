@@ -186,8 +186,8 @@ const TransactionView = ({ transactions, categories, wallets, userId, appId, fmt
                       ) : (
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${t.type==='income'?'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400':'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{t.category}</span>
                       )}
-                      {t.subscriptionId && (<span className="ml-2" title="Auto-generated"><Bot size={12} className="inline text-purple-500"/></span>)}
-                      {t.quickAddSource && (<span className="ml-2" title="Ditambahkan via Quick Add AI Scanner"><ScanLine size={12} className="inline text-emerald-500"/></span>)}
+                      {t.subscriptionId && (<span className="ml-2" title="Dibuat otomatis"><Bot size={12} className="inline text-purple-500"/></span>)}
+                      {t.quickAddSource && (<span className="ml-2" title="Ditambahkan via Tambah Cepat AI Scanner"><ScanLine size={12} className="inline text-emerald-500"/></span>)}
                     </td>
                     <td className="p-4 text-sm text-gray-600 dark:text-gray-400 truncate max-w-xs">{t.note||'-'}</td>
                     <td className={`p-4 text-sm font-medium text-right whitespace-nowrap ${t.type==='income'?'text-green-600 dark:text-green-400': t.type === 'expense' || t.type === 'investment' ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`}>
@@ -245,8 +245,8 @@ const TransactionView = ({ transactions, categories, wallets, userId, appId, fmt
                   ) : (
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${t.type==='income'?'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400':'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{t.category}</span>
                   )}
-                  {t.subscriptionId && (<span title="Auto-generated"><Bot size={12} className="text-purple-500"/></span>)}
-                  {t.quickAddSource && (<span title="Ditambahkan via Quick Add AI Scanner"><ScanLine size={12} className="text-emerald-500"/></span>)}
+                  {t.subscriptionId && (<span title="Dibuat otomatis"><Bot size={12} className="text-purple-500"/></span>)}
+                  {t.quickAddSource && (<span title="Ditambahkan via Tambah Cepat AI Scanner"><ScanLine size={12} className="text-emerald-500"/></span>)}
                 </div>
 
                 <p className="text-sm text-gray-600 dark:text-gray-400 break-words">{t.note||'-'}</p>

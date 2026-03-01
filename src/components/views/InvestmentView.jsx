@@ -86,8 +86,8 @@ const InvestmentView = ({ investments, investTypes, wallets, userId, appId, fmt 
       {/* SECTION 1: GOALS & TYPES */}
       <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-colors duration-300">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2"><Target className="text-emerald-600 dark:text-emerald-400"/> Goal & Kategori Investasi</h3>
-          <button onClick={()=>setEditingType({name:'', target:'', deadline:'', icon:''})} className="text-sm text-emerald-600 dark:text-emerald-400 hover:underline">+ Buat Goal Baru</button>
+          <h3 className="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2"><Target className="text-emerald-600 dark:text-emerald-400"/> Tujuan & Kategori Investasi</h3>
+          <button onClick={()=>setEditingType({name:'', target:'', deadline:'', icon:''})} className="text-sm text-emerald-600 dark:text-emerald-400 hover:underline">+ Buat Tujuan Baru</button>
         </div>
         
         {editingType && (
@@ -97,7 +97,7 @@ const InvestmentView = ({ investments, investTypes, wallets, userId, appId, fmt 
                 <input value={editingType.icon} onChange={e=>setEditingType({...editingType, icon:e.target.value})} className="w-full p-2 border rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white text-center" placeholder="💰"/>
              </div>
              <div className="md:col-span-2 space-y-1">
-                <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Nama Kategori/Goal</label>
+               <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Nama Kategori/Tujuan</label>
                 <input required value={editingType.name} onChange={e=>setEditingType({...editingType, name:e.target.value})} className="w-full p-2 border rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white" placeholder="Misal: Dana Haji"/>
              </div>
              <div className="space-y-1">
@@ -110,7 +110,7 @@ const InvestmentView = ({ investments, investTypes, wallets, userId, appId, fmt 
              </div>
              <div className="md:col-span-5 flex justify-end gap-2 pt-2">
                <button type="button" onClick={()=>setEditingType(null)} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg">Batal</button>
-               <button type="submit" className="px-6 py-2 text-sm bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg font-medium shadow-sm">Simpan Goal</button>
+               <button type="submit" className="px-6 py-2 text-sm bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg font-medium shadow-sm">Simpan Tujuan</button>
              </div>
            </form>
         )}
@@ -174,11 +174,11 @@ const InvestmentView = ({ investments, investTypes, wallets, userId, appId, fmt 
                   <input required value={assetForm.name} onChange={e=>setAssetForm({...assetForm, name:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white dark:bg-gray-700 dark:text-white" placeholder="Contoh: Antam 5g"/>
                </div>
                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Icon (Emoji)</label>
-                  <input value={assetForm.icon} onChange={e=>setAssetForm({...assetForm, icon:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white dark:bg-gray-700 dark:text-white text-center" placeholder="Default: ❓"/>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Ikon (Emoji)</label>
+                <input value={assetForm.icon} onChange={e=>setAssetForm({...assetForm, icon:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white dark:bg-gray-700 dark:text-white text-center" placeholder="Bawaan: ❓"/>
                </div>
                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Kategori/Goal</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Kategori/Tujuan</label>
                   <select required value={assetForm.typeId} onChange={e=>setAssetForm({...assetForm, typeId:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white dark:bg-gray-700 dark:text-white"><option value="">Pilih...</option>{investTypes.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select>
                </div>
                <div className="space-y-2">
