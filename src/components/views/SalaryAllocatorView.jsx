@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Plus, Trash2, RefreshCw, Target, DollarSign, AlertTriangle, CheckCircle, CalendarDays, ArrowLeftRight, BarChart3 } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, Target, DollarSign, AlertTriangle, CheckCircle, CalendarDays, ArrowLeftRight, BarChart3, Receipt } from 'lucide-react';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip, Legend } from 'recharts';
 import { useI18n } from '../../i18n/I18nContext';
+import { formatDate } from '../../utils/formatters';
 
 const COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6366F1'];
 
@@ -79,6 +80,13 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
     [transactions, selectedMonth]
   );
 
+  const monthlyAllTransactions = useMemo(
+    () => (transactions || [])
+      .filter(tx => tx?.date && toMonthKey(tx.date) === selectedMonth)
+      .sort((a, b) => (b.date?.getTime?.() ?? 0) - (a.date?.getTime?.() ?? 0)),
+    [transactions, selectedMonth]
+  );
+
   const spendingByCategory = useMemo(() => {
     const map = new Map();
     for (const tx of monthlyExpenseTransactions) {
@@ -87,6 +95,11 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
     }
     return map;
   }, [monthlyExpenseTransactions]);
+
+  const walletMap = useMemo(
+    () => new Map((wallets || []).map(w => [w.id, w])),
+    [wallets]
+  );
 
   const totalAllocatedExpense = useMemo(
     () => expenseAllocations.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0),
@@ -830,6 +843,64 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
           </div>
         </div>
       )}
+
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div className="p-4 border-b dark:border-gray-700">
+          <h3 className="font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2">
+            <Receipt size={18} className="text-emerald-500"/> {t('salaryAllocator.transactionHistory')}
+          </h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('salaryAllocator.transactionHistoryDesc')}</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
+              <tr>
+                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">{t('salaryAllocator.txDate')}</th>
+                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">{t('salaryAllocator.txType')}</th>
+                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">{t('salaryAllocator.txCategory')}</th>
+                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">{t('salaryAllocator.txNote')}</th>
+                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">{t('salaryAllocator.txWallet')}</th>
+                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300 text-right">{t('salaryAllocator.txAmount')}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              {monthlyAllTransactions.length === 0 ? (
+                <tr><td colSpan="6" className="p-8 text-center text-gray-400 dark:text-gray-500">{t('salaryAllocator.txEmpty')}</td></tr>
+              ) : monthlyAllTransactions.map(tx => {
+                const typeLabel = tx.type === 'expense' ? t('salaryAllocator.txTypeExpense')
+                  : tx.type === 'income' ? t('salaryAllocator.txTypeIncome')
+                  : tx.type === 'investment' ? t('salaryAllocator.txTypeInvestment')
+                  : t('salaryAllocator.txTypeTransfer');
+                const typeColor = tx.type === 'expense' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                  : tx.type === 'income' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                  : tx.type === 'investment' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                  : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
+                const amountColor = tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-400'
+                  : tx.type === 'expense' ? 'text-red-600 dark:text-red-400'
+                  : tx.type === 'investment' ? 'text-blue-600 dark:text-blue-400'
+                  : 'text-purple-600 dark:text-purple-400';
+                const walletName = (() => {
+                  const wId = tx.walletId || tx.sourceWalletId;
+                  const w = walletMap.get(wId);
+                  return w ? `${w.icon} ${w.name}` : '-';
+                })();
+                return (
+                  <tr key={tx.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                    <td className="p-4 text-gray-600 dark:text-gray-300 whitespace-nowrap">{formatDate(tx.date)}</td>
+                    <td className="p-4">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${typeColor}`}>{typeLabel}</span>
+                    </td>
+                    <td className="p-4 text-gray-700 dark:text-gray-200">{tx.category || '-'}</td>
+                    <td className="p-4 text-gray-500 dark:text-gray-400 max-w-[200px] truncate">{tx.note || '-'}</td>
+                    <td className="p-4 text-gray-500 dark:text-gray-400 whitespace-nowrap">{walletName}</td>
+                    <td className={`p-4 font-semibold text-right whitespace-nowrap ${amountColor}`}>{fmt(tx.amount)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 };
