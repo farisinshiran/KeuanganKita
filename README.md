@@ -66,7 +66,7 @@
 - **Harga Emas Real-Time**: Fetch harga emas terkini dari API eksternal
 - **Custom Investment Types**: Buat tipe investasi sesuai kebutuhan
 
-### � Kontrol Pengeluaran Bulanan
+### 📅 Kontrol Pengeluaran Bulanan
 - **Fokus per Bulan**:
   - Pilih periode bulan aktif untuk input dan monitoring
   - Data setiap bulan tersimpan terpisah agar histori tetap rapi
@@ -79,6 +79,10 @@
 - **Monitoring Alokasi vs Realisasi**:
   - Realisasi menghitung transaksi `expense`, langganan otomatis, dan `investment`
   - Tabel status per kategori: aman, pas, atau melebihi alokasi
+- **Riwayat Transaksi Bulan Berjalan**:
+  - Tabel lengkap semua transaksi (pengeluaran, pemasukan, investasi, transfer) pada bulan yang dipilih
+  - Tampil tanggal, tipe, kategori, keterangan, rekening, dan nominal
+  - Transaksi diurutkan dari yang terbaru
 - **Carry-over Manual**:
   - Bawa sisa alokasi dari bulan sebelumnya hanya saat pengguna memilih
 - **Auto-Save Firestore**:
@@ -216,11 +220,33 @@ npm run preview
 
 ```
 src/
-├── App.jsx              # Main application component
-├── App.css              # Global styles
-├── main.jsx             # Entry point
-├── index.css            # Base styles
-└── assets/              # Static assets
+├── App.jsx                     # Main application component
+├── App.css                     # Global styles
+├── main.jsx                    # Entry point
+├── index.css                   # Base styles
+├── assets/                     # Static assets
+├── components/
+│   ├── layout/                 # Layout components (Sidebar, Header)
+│   ├── modals/                 # Modal dialogs (QuickAdd, etc.)
+│   ├── ui/                     # Reusable UI components
+│   └── views/                  # Page-level view components
+│       ├── DashboardView.jsx
+│       ├── TransactionView.jsx
+│       ├── WalletView.jsx
+│       ├── SubscriptionView.jsx
+│       ├── InvestmentView.jsx
+│       ├── SalaryAllocatorView.jsx  # Monthly control + transaction history
+│       ├── SalarySlipArchiveView.jsx
+│       ├── ZakatView.jsx
+│       ├── CategoryView.jsx
+│       └── ...
+├── config/
+│   └── firebase.js             # Firebase configuration
+├── constants/                  # App constants
+├── hooks/                      # Custom React hooks
+├── i18n/                       # Internationalization (id/en)
+└── utils/
+    └── formatters.js           # Currency & date formatters
 ```
 
 ## 🔄 Data Flow
@@ -278,7 +304,7 @@ UI Rendering & User Interaction
 | Wallet Management | ✅ | Multi-wallet support with limits |
 | Subscription Tracker | ✅ | Auto icon mapping untuk 50+ services |
 | Investment Tracking | ✅ | Multiple asset types dengan targets |
-| Salary Allocator | ✅ | Salary allocation calculator with templates |
+| Salary Allocator | ✅ | Monthly budget allocation with transaction history |
 | Zakat Calculator | ✅ | Islamic finance calculations |
 | Budget Monitoring | ✅ | Real-time alerts & progress tracking |
 | Multi-Currency | ✅ | 7 major currencies support |
