@@ -33,14 +33,18 @@ const TransactionModal = ({ isOpen, onClose, categories, wallets, investments = 
       return;
     }
 
+    const isInvestmentBuy = formData.type === 'investment';
+    const isInvestmentSale = formData.type === 'investment_sale';
+    const isInvestmentTx = isInvestmentBuy || isInvestmentSale;
+
     let selectedInvestment = null;
-    if (formData.type === 'investment') {
+    if (isInvestmentTx) {
       if (!formData.walletId) {
-        alert('Pilih kantong/akun sumber dana investasi');
+        alert(isInvestmentSale ? 'Pilih kantong/akun tujuan hasil penjualan aset' : 'Pilih kantong/akun sumber dana investasi');
         return;
       }
       if (!formData.investmentId) {
-        alert('Pilih aset investasi yang akan ditambah');
+        alert(isInvestmentSale ? 'Pilih aset investasi yang akan dijual' : 'Pilih aset investasi yang akan ditambah');
         return;
       }
       selectedInvestment = investments.find(inv => inv.id === formData.investmentId);
@@ -48,13 +52,19 @@ const TransactionModal = ({ isOpen, onClose, categories, wallets, investments = 
         alert('Aset investasi tidak ditemukan, silakan pilih ulang');
         return;
       }
+      if (isInvestmentSale) {
+        if ((Number(selectedInvestment.currentValue) || 0) < amount || (Number(selectedInvestment.purchaseValue) || 0) < amount) {
+          alert('Nilai jual melebihi nilai aset yang tersedia');
+          return;
+        }
+      }
     }
 
     const payload = {
       ...formData,
       amount,
-      category: formData.type === 'investment' ? 'Investasi' : formData.category,
-      investmentName: formData.type === 'investment' ? (selectedInvestment?.name || '') : '',
+      category: isInvestmentBuy ? 'Investasi' : isInvestmentSale ? 'Penjualan Aset' : formData.category,
+      investmentName: isInvestmentTx ? (selectedInvestment?.name || '') : '',
       date: new Date(formData.date),
       updatedAt: serverTimestamp()
     };
@@ -65,10 +75,11 @@ const TransactionModal = ({ isOpen, onClose, categories, wallets, investments = 
         await updateDoc(doc(db, 'artifacts', appId, 'users', userId, 'transactions', formData.id), payload);
       } else {
         await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'transactions'), { ...payload, createdAt: serverTimestamp() });
-        if (formData.type === 'investment') {
+        if (isInvestmentTx) {
+          const delta = isInvestmentSale ? -amount : amount;
           await updateDoc(doc(db, 'artifacts', appId, 'users', userId, 'investments', formData.investmentId), {
-            purchaseValue: increment(amount),
-            currentValue: increment(amount),
+            purchaseValue: increment(delta),
+            currentValue: increment(delta),
             updatedAt: serverTimestamp()
           });
         }
@@ -106,6 +117,7 @@ const TransactionModal = ({ isOpen, onClose, categories, wallets, investments = 
                   <button type="button" onClick={()=>switchType('income')} className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all border ${formData.type==='income'?'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700 ring-2 ring-green-500/20':'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'}`}>Pemasukan</button>
                   <button type="button" onClick={()=>switchType('expense')} className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all border ${formData.type==='expense'?'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700 ring-2 ring-red-500/20':'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'}`}>Pengeluaran</button>
                   <button type="button" onClick={()=>switchType('investment')} className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all border ${formData.type==='investment'?'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700 ring-2 ring-amber-500/20':'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'}`}>Investasi</button>
+                  <button type="button" onClick={()=>switchType('investment_sale')} className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all border ${formData.type==='investment_sale'?'bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700 ring-2 ring-indigo-500/20':'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'}`}>Jual Aset</button>
                   <button type="button" onClick={()=>switchType('transfer')} className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all border ${formData.type==='transfer'?'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700 ring-2 ring-blue-500/20':'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'}`}>Transfer</button>
                 </div>
              </div>
@@ -141,7 +153,7 @@ const TransactionModal = ({ isOpen, onClose, categories, wallets, investments = 
                       {wallets.map(w=><option key={w.id} value={w.id}>{w.icon} {w.name}</option>)}
                     </select>
                   </div>
-                  {formData.type === 'investment' ? (
+                  {formData.type === 'investment' || formData.type === 'investment_sale' ? (
                     <div className="space-y-2">
                       <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Portofolio Aset</label>
                       <select required value={formData.investmentId} onChange={e=>setFormData({...formData, investmentId:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 dark:text-white transition-all">

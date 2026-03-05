@@ -59,14 +59,18 @@ const TransactionView = ({ transactions, categories, wallets, investments = [], 
       return;
     }
 
+    const isInvestmentBuy = formData.type === 'investment';
+    const isInvestmentSale = formData.type === 'investment_sale';
+    const isInvestmentTx = isInvestmentBuy || isInvestmentSale;
+
     let selectedInvestment = null;
-    if (formData.type === 'investment') {
+    if (isInvestmentTx) {
       if (!formData.walletId) {
-        alert('Pilih kantong/akun sumber dana investasi');
+        alert(isInvestmentSale ? 'Pilih kantong/akun tujuan hasil penjualan aset' : 'Pilih kantong/akun sumber dana investasi');
         return;
       }
       if (!formData.investmentId) {
-        alert('Pilih aset investasi yang akan ditambah');
+        alert(isInvestmentSale ? 'Pilih aset investasi yang akan dijual' : 'Pilih aset investasi yang akan ditambah');
         return;
       }
       selectedInvestment = investmentMap.get(formData.investmentId);
@@ -74,13 +78,19 @@ const TransactionView = ({ transactions, categories, wallets, investments = [], 
         alert('Aset investasi tidak ditemukan, silakan pilih ulang');
         return;
       }
+      if (isInvestmentSale) {
+        if ((Number(selectedInvestment.currentValue) || 0) < amount || (Number(selectedInvestment.purchaseValue) || 0) < amount) {
+          alert('Nilai jual melebihi nilai aset yang tersedia');
+          return;
+        }
+      }
     }
 
     const payload = {
       ...formData,
       amount,
-      category: formData.type === 'investment' ? 'Investasi' : formData.category,
-      investmentName: formData.type === 'investment' ? (selectedInvestment?.name || '') : '',
+      category: isInvestmentBuy ? 'Investasi' : isInvestmentSale ? 'Penjualan Aset' : formData.category,
+      investmentName: isInvestmentTx ? (selectedInvestment?.name || '') : '',
       date: new Date(formData.date),
       updatedAt: serverTimestamp()
     };
@@ -91,10 +101,11 @@ const TransactionView = ({ transactions, categories, wallets, investments = [], 
         await updateDoc(doc(db, 'artifacts', appId, 'users', userId, 'transactions', formData.id), payload);
       } else {
         await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'transactions'), { ...payload, createdAt: serverTimestamp() });
-        if (formData.type === 'investment') {
+        if (isInvestmentTx) {
+          const delta = isInvestmentSale ? -amount : amount;
           await updateDoc(doc(db, 'artifacts', appId, 'users', userId, 'investments', formData.investmentId), {
-            purchaseValue: increment(amount),
-            currentValue: increment(amount),
+            purchaseValue: increment(delta),
+            currentValue: increment(delta),
             updatedAt: serverTimestamp()
           });
         }
@@ -157,6 +168,7 @@ const TransactionView = ({ transactions, categories, wallets, investments = [], 
                   <button type="button" onClick={()=>switchType('income')} className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all border ${formData.type==='income'?'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700 ring-2 ring-green-500/20':'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'}`}>Pemasukan</button>
                   <button type="button" onClick={()=>switchType('expense')} className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all border ${formData.type==='expense'?'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700 ring-2 ring-red-500/20':'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'}`}>Pengeluaran</button>
                   <button type="button" onClick={()=>switchType('investment')} className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all border ${formData.type==='investment'?'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700 ring-2 ring-amber-500/20':'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'}`}>Investasi</button>
+                  <button type="button" onClick={()=>switchType('investment_sale')} className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all border ${formData.type==='investment_sale'?'bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700 ring-2 ring-indigo-500/20':'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'}`}>Jual Aset</button>
                   <button type="button" onClick={()=>switchType('transfer')} className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all border ${formData.type==='transfer'?'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700 ring-2 ring-blue-500/20':'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'}`}>Mutasi / Transfer</button>
                 </div>
              </div>
@@ -192,7 +204,7 @@ const TransactionView = ({ transactions, categories, wallets, investments = [], 
                       {wallets.map(w=><option key={w.id} value={w.id}>{w.icon} {w.name}</option>)}
                     </select>
                   </div>
-                  {formData.type === 'investment' ? (
+                  {formData.type === 'investment' || formData.type === 'investment_sale' ? (
                     <div className="space-y-2">
                       <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Portofolio Aset</label>
                       <select required value={formData.investmentId} onChange={e=>setFormData({...formData, investmentId:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 dark:text-white transition-all">
@@ -247,6 +259,8 @@ const TransactionView = ({ transactions, categories, wallets, investments = [], 
                         </div>
                       ) : t.type === 'investment' ? (
                         <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1"><Briefcase size={12}/> {linkedInvestment?.name || t.investmentName || 'Investasi'}</span>
+                      ) : t.type === 'investment_sale' ? (
+                        <span className="text-indigo-600 dark:text-indigo-400 flex items-center gap-1"><Briefcase size={12}/> {linkedInvestment?.name || t.investmentName || 'Penjualan Aset'}</span>
                       ) : (
                         w ? <span>{w.icon} {w.name}</span> : <span className="text-gray-400 italic">Terhapus</span>
                       )}
@@ -256,6 +270,8 @@ const TransactionView = ({ transactions, categories, wallets, investments = [], 
                         <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Mutasi Saldo</span>
                       ) : t.type === 'investment' ? (
                         <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Beli Aset</span>
+                      ) : t.type === 'investment_sale' ? (
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">Jual Aset</span>
                       ) : (
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${t.type==='income'?'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400':'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{t.category}</span>
                       )}
@@ -263,11 +279,11 @@ const TransactionView = ({ transactions, categories, wallets, investments = [], 
                       {t.quickAddSource && (<span className="ml-2" title="Ditambahkan via Tambah Cepat AI Scanner"><ScanLine size={12} className="inline text-emerald-500"/></span>)}
                     </td>
                     <td className="p-4 text-sm text-gray-600 dark:text-gray-400 truncate max-w-xs">{t.note||'-'}</td>
-                    <td className={`p-4 text-sm font-medium text-right whitespace-nowrap ${t.type==='income'?'text-green-600 dark:text-green-400': t.type === 'expense' || t.type === 'investment' ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`}>
-                      {t.type==='income' ? '+' : (t.type === 'expense' || t.type === 'investment') ? '-' : ''}{fmt(t.amount)}
+                    <td className={`p-4 text-sm font-medium text-right whitespace-nowrap ${t.type==='income' || t.type === 'investment_sale' ?'text-green-600 dark:text-green-400': t.type === 'expense' || t.type === 'investment' ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`}>
+                      {t.type==='income' || t.type === 'investment_sale' ? '+' : (t.type === 'expense' || t.type === 'investment') ? '-' : ''}{fmt(t.amount)}
                     </td>
                     <td className="p-4 text-right flex justify-end gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                      {t.type !== 'investment' && (<button onClick={()=>handleEdit(t)} className="text-blue-400 hover:text-blue-600"><Edit2 size={16}/></button>)}
+                      {t.type !== 'investment' && t.type !== 'investment_sale' && (<button onClick={()=>handleEdit(t)} className="text-blue-400 hover:text-blue-600"><Edit2 size={16}/></button>)}
                       <button onClick={()=>handleDelete(t.id)} className="text-gray-300 hover:text-red-500"><Trash2 size={16}/></button>
                     </td>
                   </tr>
@@ -301,13 +317,15 @@ const TransactionView = ({ transactions, categories, wallets, investments = [], 
                         </div>
                       ) : t.type === 'investment' ? (
                         <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1"><Briefcase size={12}/> {linkedInvestment?.name || t.investmentName || 'Investasi'}</span>
+                      ) : t.type === 'investment_sale' ? (
+                        <span className="text-indigo-600 dark:text-indigo-400 flex items-center gap-1"><Briefcase size={12}/> {linkedInvestment?.name || t.investmentName || 'Penjualan Aset'}</span>
                       ) : (
                         w ? <span>{w.icon} {w.name}</span> : <span className="text-gray-400 italic">Terhapus</span>
                       )}
                     </div>
                   </div>
-                  <div className={`text-sm font-bold whitespace-nowrap ${t.type==='income'?'text-green-600 dark:text-green-400': t.type === 'expense' || t.type === 'investment' ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`}>
-                    {t.type==='income' ? '+' : (t.type === 'expense' || t.type === 'investment') ? '-' : ''}{fmt(t.amount)}
+                  <div className={`text-sm font-bold whitespace-nowrap ${t.type==='income' || t.type === 'investment_sale' ?'text-green-600 dark:text-green-400': t.type === 'expense' || t.type === 'investment' ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`}>
+                    {t.type==='income' || t.type === 'investment_sale' ? '+' : (t.type === 'expense' || t.type === 'investment') ? '-' : ''}{fmt(t.amount)}
                   </div>
                 </div>
 
@@ -316,6 +334,8 @@ const TransactionView = ({ transactions, categories, wallets, investments = [], 
                     <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Mutasi Saldo</span>
                   ) : t.type === 'investment' ? (
                     <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Beli Aset</span>
+                  ) : t.type === 'investment_sale' ? (
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">Jual Aset</span>
                   ) : (
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${t.type==='income'?'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400':'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{t.category}</span>
                   )}
@@ -326,7 +346,7 @@ const TransactionView = ({ transactions, categories, wallets, investments = [], 
                 <p className="text-sm text-gray-600 dark:text-gray-400 break-words">{t.note||'-'}</p>
 
                 <div className="flex items-center justify-end gap-2 pt-1">
-                  {t.type !== 'investment' && (
+                  {t.type !== 'investment' && t.type !== 'investment_sale' && (
                     <button onClick={()=>handleEdit(t)} className="min-h-[40px] px-3 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-1">
                       <Edit2 size={14}/> Edit
                     </button>
