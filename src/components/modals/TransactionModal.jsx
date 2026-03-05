@@ -1,17 +1,60 @@
 import React, { useState } from 'react';
 import { Plus, Save, X } from 'lucide-react';
-import { collection, addDoc, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, increment, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { formatDateInput } from '../../utils/formatters';
 
-const TransactionModal = ({ isOpen, onClose, categories, wallets, userId, appId, fmt }) => {
-  const [formData, setFormData] = useState({ id: null, type: 'expense', amount: '', category: '', walletId: '', sourceWalletId: '', targetWalletId: '', note: '', date: formatDateInput(new Date()) });
+const createInitialFormData = () => ({
+  id: null,
+  type: 'expense',
+  amount: '',
+  category: '',
+  walletId: '',
+  sourceWalletId: '',
+  targetWalletId: '',
+  investmentId: '',
+  note: '',
+  date: formatDateInput(new Date())
+});
+
+const TransactionModal = ({ isOpen, onClose, categories, wallets, investments = [], userId, appId, fmt }) => {
+  const [formData, setFormData] = useState(createInitialFormData);
+
+  const switchType = (type) => {
+    const base = { ...formData, type, category: '', sourceWalletId: '', targetWalletId: '', investmentId: '' };
+    setFormData(type === 'transfer' ? { ...base, walletId: '' } : base);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const amount = Number(formData.amount);
+    if (!(amount > 0)) {
+      alert('Jumlah transaksi harus lebih dari 0');
+      return;
+    }
+
+    let selectedInvestment = null;
+    if (formData.type === 'investment') {
+      if (!formData.walletId) {
+        alert('Pilih kantong/akun sumber dana investasi');
+        return;
+      }
+      if (!formData.investmentId) {
+        alert('Pilih aset investasi yang akan ditambah');
+        return;
+      }
+      selectedInvestment = investments.find(inv => inv.id === formData.investmentId);
+      if (!selectedInvestment) {
+        alert('Aset investasi tidak ditemukan, silakan pilih ulang');
+        return;
+      }
+    }
+
     const payload = {
       ...formData,
-      amount: Number(formData.amount),
+      amount,
+      category: formData.type === 'investment' ? 'Investasi' : formData.category,
+      investmentName: formData.type === 'investment' ? (selectedInvestment?.name || '') : '',
       date: new Date(formData.date),
       updatedAt: serverTimestamp()
     };
@@ -22,8 +65,15 @@ const TransactionModal = ({ isOpen, onClose, categories, wallets, userId, appId,
         await updateDoc(doc(db, 'artifacts', appId, 'users', userId, 'transactions', formData.id), payload);
       } else {
         await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'transactions'), { ...payload, createdAt: serverTimestamp() });
+        if (formData.type === 'investment') {
+          await updateDoc(doc(db, 'artifacts', appId, 'users', userId, 'investments', formData.investmentId), {
+            purchaseValue: increment(amount),
+            currentValue: increment(amount),
+            updatedAt: serverTimestamp()
+          });
+        }
       }
-      setFormData({ id: null, type: 'expense', amount: '', category: '', walletId: '', sourceWalletId: '', targetWalletId: '', note: '', date: formatDateInput(new Date()) });
+      setFormData(createInitialFormData());
       onClose();
     } catch (err) {
       console.error(err);
@@ -53,9 +103,10 @@ const TransactionModal = ({ isOpen, onClose, categories, wallets, userId, appId,
              <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Jenis Transaksi</label>
                 <div className="flex gap-2">
-                  <button type="button" onClick={()=>setFormData({...formData, type:'income', category:'', sourceWalletId: '', targetWalletId: ''})} className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all border ${formData.type==='income'?'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700 ring-2 ring-green-500/20':'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'}`}>Pemasukan</button>
-                  <button type="button" onClick={()=>setFormData({...formData, type:'expense', category:'', sourceWalletId: '', targetWalletId: ''})} className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all border ${formData.type==='expense'?'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700 ring-2 ring-red-500/20':'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'}`}>Pengeluaran</button>
-                  <button type="button" onClick={()=>setFormData({...formData, type:'transfer', category:''})} className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all border ${formData.type==='transfer'?'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700 ring-2 ring-blue-500/20':'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'}`}>Transfer</button>
+                  <button type="button" onClick={()=>switchType('income')} className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all border ${formData.type==='income'?'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700 ring-2 ring-green-500/20':'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'}`}>Pemasukan</button>
+                  <button type="button" onClick={()=>switchType('expense')} className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all border ${formData.type==='expense'?'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700 ring-2 ring-red-500/20':'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'}`}>Pengeluaran</button>
+                  <button type="button" onClick={()=>switchType('investment')} className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all border ${formData.type==='investment'?'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700 ring-2 ring-amber-500/20':'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'}`}>Investasi</button>
+                  <button type="button" onClick={()=>switchType('transfer')} className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all border ${formData.type==='transfer'?'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700 ring-2 ring-blue-500/20':'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'}`}>Transfer</button>
                 </div>
              </div>
 
@@ -90,10 +141,21 @@ const TransactionModal = ({ isOpen, onClose, categories, wallets, userId, appId,
                       {wallets.map(w=><option key={w.id} value={w.id}>{w.icon} {w.name}</option>)}
                     </select>
                   </div>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Kategori</label>
-                    <select required value={formData.category} onChange={e=>setFormData({...formData, category:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 dark:text-white transition-all"><option value="">Pilih Kategori...</option>{cats.map(c=><option key={c} value={c}>{c}</option>)}</select>
-                  </div>
+                  {formData.type === 'investment' ? (
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Portofolio Aset</label>
+                      <select required value={formData.investmentId} onChange={e=>setFormData({...formData, investmentId:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 dark:text-white transition-all">
+                        <option value="">Pilih Aset...</option>
+                        {investments.map(inv=><option key={inv.id} value={inv.id}>{inv.icon || '💼'} {inv.name} ({fmt(inv.currentValue || 0)})</option>)}
+                      </select>
+                      {investments.length === 0 && <p className="text-xs text-amber-600 dark:text-amber-400">Belum ada aset portofolio. Tambahkan aset dulu di menu Investasi.</p>}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Kategori</label>
+                      <select required value={formData.category} onChange={e=>setFormData({...formData, category:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 dark:text-white transition-all"><option value="">Pilih Kategori...</option>{cats.map(c=><option key={c} value={c}>{c}</option>)}</select>
+                    </div>
+                  )}
                 </>
              )}
 

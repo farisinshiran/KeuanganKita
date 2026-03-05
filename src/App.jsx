@@ -276,7 +276,7 @@ export default function App() {
         {/* ── Page views (lazy-loaded inside Suspense) ── */}
         <Suspense fallback={<PageLoader text={t('common.loadingPage')} />}>
           {activeTab === 'dashboard'              && <DashboardView             summary={summary} transactions={transactions} investments={investments} categories={categories} investTypes={investTypes} setActiveTab={setActiveTab} fmt={fmt} privacyMode={privacyMode} darkMode={darkMode} />}
-          {activeTab === 'transactions'           && <TransactionView           transactions={transactions} categories={categories} wallets={wBals} userId={uid} appId={appId} fmt={fmt} />}
+          {activeTab === 'transactions'           && <TransactionView           transactions={transactions} categories={categories} wallets={wBals} investments={investments} userId={uid} appId={appId} fmt={fmt} />}
           {activeTab === 'subscriptions'          && <SubscriptionView          subscriptions={subscriptions} wallets={wBals} userId={uid} appId={appId} fmt={fmt} />}
           {activeTab === 'wallets'                && <WalletView               wallets={wBals} transactions={transactions} userId={uid} appId={appId} fmt={fmt} privacyMode={privacyMode} />}
           {activeTab === 'investments'            && <InvestmentView            investments={investments} investTypes={investTypes} wallets={wBals} userId={uid} appId={appId} fmt={fmt} />}
@@ -289,7 +289,7 @@ export default function App() {
 
           {/* Modals */}
           {isTransactionModalOpen && (
-            <TransactionModal isOpen onClose={() => setIsTransactionModalOpen(false)} categories={categories} wallets={wBals} userId={uid} appId={appId} fmt={fmt} />
+            <TransactionModal isOpen onClose={() => setIsTransactionModalOpen(false)} categories={categories} wallets={wBals} investments={investments} userId={uid} appId={appId} fmt={fmt} />
           )}
           {isQuickAddModalOpen && (
             <QuickAddModal isOpen onClose={() => setIsQuickAddModalOpen(false)} categories={categories} wallets={wBals} userId={uid} appId={appId} fmt={fmt} />
