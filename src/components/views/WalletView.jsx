@@ -208,6 +208,7 @@ const WalletView = ({ wallets, transactions, userId, appId, fmt, privacyMode }) 
                       {getWalletTransactions().map((t, idx) => {
                         const isIncome = t.type === 'income';
                         const isExpense = t.type === 'expense';
+                        const isInvestmentSale = t.type === 'investment_sale';
                         const isTransfer = t.type === 'transfer';
                         const isTransferOut = isTransfer && t.sourceWalletId === selectedWallet.id;
                         const isTransferIn = isTransfer && t.targetWalletId === selectedWallet.id;
@@ -219,7 +220,7 @@ const WalletView = ({ wallets, transactions, userId, appId, fmt, privacyMode }) 
                             </td>
                             <td className="py-3 px-2">
                               <span className="text-xs font-semibold px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                                {isTransfer ? (isTransferOut ? 'Transfer Keluar' : 'Transfer Masuk') : (t.category || 'Lainnya')}
+                                {isTransfer ? (isTransferOut ? 'Transfer Keluar' : 'Transfer Masuk') : (isInvestmentSale ? 'Penjualan Aset' : (t.category || 'Lainnya'))}
                               </span>
                             </td>
                             <td className="py-3 px-2 text-sm text-gray-800 dark:text-gray-200">
@@ -227,11 +228,11 @@ const WalletView = ({ wallets, transactions, userId, appId, fmt, privacyMode }) 
                             </td>
                             <td className="py-3 px-2 text-right">
                               <span className={`font-bold text-sm ${
-                                isIncome || isTransferIn ? 'text-emerald-600 dark:text-emerald-400' :
+                                isIncome || isTransferIn || isInvestmentSale ? 'text-emerald-600 dark:text-emerald-400' :
                                 isExpense || isTransferOut ? 'text-red-600 dark:text-red-400' :
                                 'text-gray-600 dark:text-gray-400'
                               }`}>
-                                {(isIncome || isTransferIn) && '+'}
+                                {(isIncome || isTransferIn || isInvestmentSale) && '+'}
                                 {(isExpense || isTransferOut) && '-'}
                                 {fmt(t.amount)}
                               </span>

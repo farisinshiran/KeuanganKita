@@ -870,14 +870,17 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
                 const typeLabel = tx.type === 'expense' ? t('salaryAllocator.txTypeExpense')
                   : tx.type === 'income' ? t('salaryAllocator.txTypeIncome')
                   : tx.type === 'investment' ? t('salaryAllocator.txTypeInvestment')
+                  : tx.type === 'investment_sale' ? t('salaryAllocator.txTypeInvestmentSale')
                   : t('salaryAllocator.txTypeTransfer');
                 const typeColor = tx.type === 'expense' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                   : tx.type === 'income' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
                   : tx.type === 'investment' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                  : tx.type === 'investment_sale' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'
                   : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
                 const amountColor = tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-400'
                   : tx.type === 'expense' ? 'text-red-600 dark:text-red-400'
                   : tx.type === 'investment' ? 'text-blue-600 dark:text-blue-400'
+                  : tx.type === 'investment_sale' ? 'text-indigo-600 dark:text-indigo-400'
                   : 'text-purple-600 dark:text-purple-400';
                 const walletName = (() => {
                   const wId = tx.walletId || tx.sourceWalletId;

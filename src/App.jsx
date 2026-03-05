@@ -171,6 +171,7 @@ export default function App() {
       if      (t.type === 'income')     { inc += amt; add(t.walletId, +amt); }
       else if (t.type === 'expense')    { exp += amt; add(t.walletId, -amt); }
       else if (t.type === 'investment') {             add(t.walletId, -amt); }
+      else if (t.type === 'investment_sale') {        add(t.walletId, +amt); }
       else if (t.type === 'transfer')   { add(t.sourceWalletId, -amt); add(t.targetWalletId, +amt); }
     }
 
