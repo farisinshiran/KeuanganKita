@@ -224,7 +224,7 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
     return () => {
       cancelled = true;
     };
-  }, [salaryDocRef, selectedMonth, userId, appId]);
+  }, [salaryDocRef, selectedMonth, userId, appId, lang]);
 
   useEffect(() => {
     if (!userId || !appId || isMonthLoading || isHydratingRef.current) return;

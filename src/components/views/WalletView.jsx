@@ -3,7 +3,7 @@ import { Plus, Save, X, Edit2, Trash2, Landmark, Smartphone, Banknote, CreditCar
 import { collection, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 
-const WalletView = ({ wallets, transactions, userId, appId, fmt, privacyMode }) => {
+const WalletView = ({ wallets, transactions, userId, appId, fmt }) => {
   const [form, setForm] = useState({ id: null, name: '', type: 'bank', initialBalance: '', limit: '', icon: '' });
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState(null);
@@ -101,7 +101,7 @@ const WalletView = ({ wallets, transactions, userId, appId, fmt, privacyMode }) 
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {wallets.map(w => (
-          <div key={w.id} className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-between transition-colors duration-300 group relative cursor-pointer hover:shadow-md hover:scale-[1.01] transition-all" onClick={() => handleWalletClick(w)}>
+          <div key={w.id} className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-between duration-300 group relative cursor-pointer hover:shadow-md hover:scale-[1.01] transition-all" onClick={() => handleWalletClick(w)}>
              <div className="flex justify-between items-start">
                <div className="flex items-center gap-3">
                  <div className="text-3xl p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">

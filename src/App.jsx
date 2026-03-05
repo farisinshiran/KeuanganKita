@@ -158,7 +158,7 @@ export default function App() {
         }
       }
     })();
-  }, [user, subscriptions, wallets, transactions.length]);
+  }, [user, subscriptions, wallets, transactions]);
 
   // ── Wallet balance — O(n) single-pass Map ───────────────────
   const summary = useMemo(() => {
