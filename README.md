@@ -175,6 +175,8 @@ In Demo Mode:
 - A banner is shown at the top of the app making it clear it is a demo
 - The Firebase SDK is completely excluded from the bundle (saves ~340 KB)
 - Sign-in is instant with a pre-populated "Demo User"
+- `vite.config.js` aliases `firebase/app`, `firebase/auth`, and `firebase/firestore` to stubs in `src/lib/` — no view or hook files need any demo-specific branching
+- The Firestore mock supports: `collection`, `doc`, `addDoc`, `setDoc`, `updateDoc`, `deleteDoc`, `getDoc`, `getDocs`, **`writeBatch`**, `onSnapshot`, `serverTimestamp`, `increment`, `arrayUnion`, `arrayRemove`, `where`, `orderBy`, `query`
 
 To deploy the live demo on GitHub Pages:
 
@@ -244,9 +246,17 @@ dompet-keluarga/
     ├── App.jsx                 # Root: auth, routing, global state
     ├── config/
     │   └── firebase.js         # Firebase initialisation (env-var driven)
+    ├── lib/
+    │   ├── demoApp.js          # firebase/app stub (demo mode)
+    │   ├── demoAuth.js         # firebase/auth stub — auto-logs in "Demo User"
+    │   └── demoDb.js           # localStorage-backed Firestore mock (collection, doc,
+    │                           #   addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs,
+    │                           #   writeBatch, onSnapshot, serverTimestamp, increment,
+    │                           #   arrayUnion, arrayRemove, where, orderBy, query…)
     ├── components/
     │   ├── layout/
-    │   │   └── Sidebar.jsx     # Navigation sidebar
+    │   │   ├── Sidebar.jsx         # Navigation sidebar + MobileMenu + AppFooter
+    │   │   └── AIAdvisorPanel.jsx  # Slide-in AI chat panel
     │   ├── modals/
     │   │   ├── BudgetWizard.jsx       # 5-step budget setup wizard
     │   │   ├── TransactionModal.jsx   # Add/edit transaction
