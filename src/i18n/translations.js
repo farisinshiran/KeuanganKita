@@ -32,6 +32,8 @@ export const translations = {
       salarySlipArchive: 'Arsip Slip Gaji',
       salaryAllocator: 'Kontrol Bulanan',
       zakat: 'Kalkulator Zakat',
+      savingsGoals: 'Target Tabungan',
+      aiAdvisor: 'AI Advisor',
       categories: 'Kategori',
     },
     sidebar: {
@@ -106,6 +108,8 @@ export const translations = {
       salarySlipArchive: 'Salary Slip Archive',
       salaryAllocator: 'Monthly Control',
       zakat: 'Zakat Calculator',
+      savingsGoals: 'Savings Goals',
+      aiAdvisor: 'AI Advisor',
       categories: 'Categories',
     },
     sidebar: {

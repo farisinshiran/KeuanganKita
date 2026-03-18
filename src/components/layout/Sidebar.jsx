@@ -2,7 +2,7 @@ import React from 'react';
 import {
   Wallet, PieChart, ArrowUpRight, Repeat, CreditCard, TrendingUp,
   GraduationCap, BarChart3, ScanLine, DollarSign, Heart, Settings,
-  User, Eye, EyeOff, Moon, Sun, LogOut, X, Menu, RefreshCw, Bot
+  User, Eye, EyeOff, Moon, Sun, LogOut, X, Menu, RefreshCw, Bot, Target
 } from 'lucide-react';
 import { NavBtn } from '../ui/index';
 import { useI18n } from '../../i18n/I18nContext';
@@ -18,6 +18,8 @@ export const NAV_ITEMS = [
   { id: 'salary-slip-archive',     icon: <ScanLine size={20}/>,       labelKey: 'nav.salarySlipArchive' },
   { id: 'salary-allocator',        icon: <DollarSign size={20}/>,     labelKey: 'nav.salaryAllocator' },
   { id: 'zakat',                   icon: <Heart size={20}/>,          labelKey: 'nav.zakat' },
+  { id: 'savings-goals',          icon: <Target size={20}/>,         labelKey: 'nav.savingsGoals' },
+  { id: 'ai-advisor',             icon: <Bot size={20}/>,            labelKey: 'nav.aiAdvisor' },
   { id: 'categories',              icon: <Settings size={20}/>,       labelKey: 'nav.categories' },
 ];
 

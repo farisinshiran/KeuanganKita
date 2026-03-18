@@ -27,6 +27,8 @@ const SalaryAllocatorView       = lazy(() => import('./components/views/SalaryAl
 const EducationFundView         = lazy(() => import('./components/views/EducationFundView'));
 const SalarySlipArchiveView     = lazy(() => import('./components/views/SalarySlipArchiveView'));
 const IncomeDiversificationView = lazy(() => import('./components/views/IncomeDiversificationView'));
+const SavingsGoalView           = lazy(() => import('./components/views/SavingsGoalView'));
+const AIAdvisorView             = lazy(() => import('./components/views/AIAdvisorView'));
 
 // --- LAZY-LOADED MODALS ---
 const TransactionModal = lazy(() => import('./components/modals/TransactionModal'));
@@ -66,7 +68,7 @@ export default function App() {
   const mainRef     = useRef(null);
 
   // ── All remote data from custom hook ───────────────────────
-  const { transactions, investments, categories, investTypes, wallets, subscriptions } =
+  const { transactions, investments, categories, investTypes, wallets, subscriptions, savingsGoals } =
     useAppData(user, refreshKey);
 
   // ── Dark mode ───────────────────────────────────────────────
@@ -286,6 +288,8 @@ export default function App() {
           {activeTab === 'salary-slip-archive'    && <SalarySlipArchiveView     userId={uid} appId={appId} fmt={fmt} />}
           {activeTab === 'salary-allocator'       && <SalaryAllocatorView       categories={categories} wallets={wBals} transactions={transactions} userId={uid} appId={appId} fmt={fmt} />}
           {activeTab === 'zakat'                  && <ZakatView                 summary={summary} investments={investments} fmt={fmt} />}
+          {activeTab === 'savings-goals'          && <SavingsGoalView          savingsGoals={savingsGoals} wallets={wBals} userId={uid} appId={appId} fmt={fmt} />}
+          {activeTab === 'ai-advisor'             && <AIAdvisorView            summary={summary} transactions={transactions} categories={categories} investments={investments} savingsGoals={savingsGoals} fmt={fmt} />}
           {activeTab === 'categories'             && <CategoryView              categories={categories} userId={uid} appId={appId} fmt={fmt} />}
 
           {/* Modals */}

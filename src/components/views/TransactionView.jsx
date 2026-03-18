@@ -1,10 +1,35 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Plus, Save, X, Edit2, Trash2, ArrowRightLeft, Briefcase, Bot, ScanLine, ListFilter
+  Plus, Save, X, Edit2, Trash2, ArrowRightLeft, Briefcase, Bot, ScanLine, ListFilter, Download
 } from 'lucide-react';
 import { collection, addDoc, doc, increment, serverTimestamp, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { formatDate, formatDateInput } from '../../utils/formatters';
+
+const exportToCSV = (transactions, wallets) => {
+  const walletMap = new Map((wallets || []).map(w => [w.id, w]));
+  const header = ['Tanggal', 'Jenis', 'Jumlah', 'Kategori', 'Rekening', 'Catatan'];
+  const rows = transactions.map(t => {
+    const w     = walletMap.get(t.walletId);
+    const wSrc  = walletMap.get(t.sourceWalletId);
+    const wTgt  = walletMap.get(t.targetWalletId);
+    const typeLabel = { income: 'Pemasukan', expense: 'Pengeluaran', investment: 'Investasi', investment_sale: 'Jual Aset', transfer: 'Transfer' }[t.type] || t.type;
+    const acct  = t.type === 'transfer'
+      ? `${wSrc?.name || '?'} → ${wTgt?.name || '?'}`
+      : w?.name || '-';
+    const cat   = t.type === 'transfer' ? 'Mutasi Saldo' : (t.category || '-');
+    const dateStr = t.date ? t.date.toLocaleDateString('id-ID') : '-';
+    return [dateStr, typeLabel, t.amount, cat, acct, t.note || ''].map(v => `"${String(v).replace(/"/g, '""')}"`);
+  });
+  const csv = [header, ...rows].map(r => r.join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `transaksi-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
 
 const createInitialFormData = () => ({
   id: null,
@@ -133,7 +158,10 @@ const TransactionView = ({ transactions, categories, wallets, investments = [], 
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Transaksi</h2>
-        <button onClick={() => { setIsFormOpen(!isFormOpen); setFormData(createInitialFormData()); }} className="bg-emerald-600 text-white px-4 py-2 rounded-lg flex gap-2 hover:bg-emerald-700 transition-colors">{isFormOpen ? <X size={18}/> : <Plus size={18}/>} <span>{isFormOpen ? 'Batal' : 'Baru'}</span></button>
+        <div className="flex gap-2">
+          <button onClick={() => exportToCSV(filteredTransactions, wallets)} className="border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-3 py-2 rounded-lg flex gap-1.5 items-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"><Download size={16}/> Export CSV</button>
+          <button onClick={() => { setIsFormOpen(!isFormOpen); setFormData(createInitialFormData()); }} className="bg-emerald-600 text-white px-4 py-2 rounded-lg flex gap-2 hover:bg-emerald-700 transition-colors">{isFormOpen ? <X size={18}/> : <Plus size={18}/>} <span>{isFormOpen ? 'Batal' : 'Baru'}</span></button>
+        </div>
       </div>
 
       {/* FILTER BAR */}

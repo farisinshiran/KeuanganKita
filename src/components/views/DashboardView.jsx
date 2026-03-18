@@ -1,14 +1,16 @@
 import React, { useMemo } from 'react';
 import {
-  Wallet, TrendingUp, PieChart, AlertTriangle, Target,
+  Wallet, TrendingUp, PieChart, AlertTriangle, Target, Activity, BarChart3,
   CreditCard, Landmark, Banknote, Smartphone, Briefcase
 } from 'lucide-react';
 import {
   PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip, Legend,
-  LineChart, Line, XAxis, YAxis, CartesianGrid, AreaChart, Area
+  LineChart, Line, XAxis, YAxis, CartesianGrid, AreaChart, Area,
+  BarChart, Bar
 } from 'recharts';
 import { Card } from '../ui/index';
 import { COLORS } from '../../constants/currencies';
+import { calculateHealthScore, getScoreStatus } from '../../utils/healthScore';
 
 const DashboardView = ({ summary, transactions, investments, categories, investTypes, setActiveTab, fmt, privacyMode, darkMode }) => {
   const expensePie = useMemo(() => {
@@ -85,6 +87,47 @@ const DashboardView = ({ summary, transactions, investments, categories, investT
   const gridStroke = darkMode ? '#374151' : '#eee';
   const tooltipStyle = darkMode ? { backgroundColor: '#1f2937', border: '1px solid #374151', color: '#f3f4f6' } : { backgroundColor: '#fff', color: '#333' };
 
+  const healthScore = useMemo(
+    () => calculateHealthScore(summary, transactions, categories),
+    [summary, transactions, categories],
+  );
+
+  const momData = useMemo(() => {
+    const now  = new Date();
+    const thisM = now.getMonth();
+    const thisY = now.getFullYear();
+    const prevDate = new Date(thisY, thisM - 1, 1);
+    const prevM = prevDate.getMonth();
+    const prevY = prevDate.getFullYear();
+
+    const thisSpending = {};
+    const prevSpending = {};
+    transactions.forEach(t => {
+      if (t.type !== 'expense' || !t.date) return;
+      const m = t.date.getMonth();
+      const y = t.date.getFullYear();
+      if (m === thisM && y === thisY) thisSpending[t.category] = (thisSpending[t.category] || 0) + Number(t.amount);
+      else if (m === prevM && y === prevY) prevSpending[t.category] = (prevSpending[t.category] || 0) + Number(t.amount);
+    });
+
+    const allCats = new Set([...Object.keys(thisSpending), ...Object.keys(prevSpending)]);
+    const rows = Array.from(allCats)
+      .map(cat => ({ cat, this: thisSpending[cat] || 0, prev: prevSpending[cat] || 0 }))
+      .sort((a, b) => b.this - a.this)
+      .slice(0, 6);
+
+    const thisIncome  = transactions.filter(t => t.type === 'income'  && t.date?.getMonth() === thisM && t.date?.getFullYear() === thisY).reduce((a, t) => a + Number(t.amount), 0);
+    const prevIncome  = transactions.filter(t => t.type === 'income'  && t.date?.getMonth() === prevM && t.date?.getFullYear() === prevY).reduce((a, t) => a + Number(t.amount), 0);
+    const thisExpense = Object.values(thisSpending).reduce((a, v) => a + v, 0);
+    const prevExpense = Object.values(prevSpending).reduce((a, v) => a + v, 0);
+
+    const pct = (a, b) => b === 0 ? null : (((a - b) / b) * 100).toFixed(1);
+    const bulanIni  = now.toLocaleString('id-ID', { month: 'long' });
+    const bulanLalu = prevDate.toLocaleString('id-ID', { month: 'long' });
+
+    return { rows, thisIncome, prevIncome, thisExpense, prevExpense, pct, bulanIni, bulanLalu };
+  }, [transactions]);
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* Ringkasan Saldo (Top Cards) */}
@@ -153,6 +196,44 @@ const DashboardView = ({ summary, transactions, investments, categories, investT
         </div>
       )}
 
+      {/* Financial Health Score */}
+      {(() => {
+        const hs = healthScore;
+        const st = getScoreStatus(hs.score);
+        return (
+          <div className={`bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border ${st.border} dark:border-opacity-40 transition-colors duration-300`}>
+            <h3 className="font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+              <Activity size={18} className="text-emerald-500"/> Skor Kesehatan Keuangan
+            </h3>
+            <div className="flex flex-col md:flex-row gap-6 items-center">
+              {/* Circle Score */}
+              <div className="flex-shrink-0 flex flex-col items-center">
+                <div className={`w-28 h-28 rounded-full flex flex-col items-center justify-center border-8 ${st.ringColor}`}>
+                  <span className="text-3xl font-extrabold text-gray-800 dark:text-gray-100">{hs.score}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">/ 100</span>
+                </div>
+                <span className={`mt-2 text-sm font-semibold ${st.color}`}>{st.label}</span>
+              </div>
+              {/* Breakdown bars */}
+              <div className="flex-1 w-full space-y-3">
+                {hs.breakdown.map(item => (
+                  <div key={item.key}>
+                    <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
+                      <span>{item.label}</span>
+                      <span className="font-semibold">{item.score}/{item.max} — <span className="text-gray-400 dark:text-gray-500">{item.detail}</span></span>
+                    </div>
+                    <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2">
+                      <div className={`h-2 rounded-full ${item.score >= item.max * 0.75 ? 'bg-emerald-500' : item.score >= item.max * 0.4 ? 'bg-amber-400' : 'bg-red-500'}`}
+                        style={{width: `${(item.score / item.max) * 100}%`}} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col min-h-[300px] transition-colors duration-300">
@@ -219,6 +300,52 @@ const DashboardView = ({ summary, transactions, investments, categories, investT
               ))}
             </div>
           </div>
+      </div>
+
+      {/* Month-over-Month Comparison */}
+      <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-colors duration-300">
+        <h3 className="font-bold text-gray-700 dark:text-gray-200 mb-1 flex items-center gap-2">
+          <BarChart3 size={18} className="text-indigo-500"/> Perbandingan Bulan ke Bulan
+        </h3>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">{momData.bulanLalu} vs {momData.bulanIni}</p>
+
+        {/* Summary diff row */}
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          {[{label:'Pemasukan', prev: momData.prevIncome, curr: momData.thisIncome, up:'good', clr:'text-emerald-600 dark:text-emerald-400'},
+            {label:'Pengeluaran', prev: momData.prevExpense, curr: momData.thisExpense, up:'bad', clr:'text-red-600 dark:text-red-400'}].map(row => {
+            const diff = momData.pct(row.curr, row.prev);
+            const up   = row.curr >= row.prev;
+            const good = (up && row.up === 'good') || (!up && row.up === 'bad');
+            return (
+              <div key={row.label} className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">{row.label}</div>
+                <div className={`font-bold ${row.clr}`}>{fmt(row.curr)}</div>
+                {diff !== null && (
+                  <div className={`text-xs mt-1 ${good ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                    {up ? '▲' : '▼'} {Math.abs(diff)}% vs {momData.bulanLalu}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Top categories bar chart */}
+        {momData.rows.length > 0 ? (
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={momData.rows} margin={{top:5, right:20, bottom:5, left:0}} barCategoryGap="30%">
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridStroke}/>
+              <XAxis dataKey="cat" tick={{fontSize:11, fill: chartStroke}} tickLine={false} axisLine={false}/>
+              <YAxis tick={{fontSize:10, fill: chartStroke}} tickFormatter={v => privacyMode ? '•' : `${(v/1000).toFixed(0)}k`} tickLine={false} axisLine={false}/>
+              <ReTooltip formatter={v => fmt(v)} contentStyle={tooltipStyle}/>
+              <Legend />
+              <Bar dataKey="prev" name={momData.bulanLalu} fill="#6366f1" radius={[4,4,0,0]}/>
+              <Bar dataKey="this" name={momData.bulanIni} fill="#10b981" radius={[4,4,0,0]}/>
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="h-32 flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm">Belum ada data perbandingan</div>
+        )}
       </div>
     </div>
   );
