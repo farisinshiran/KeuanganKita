@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react';
-import { Plus, Wallet, Eye, EyeOff, Moon, Sun, Menu, RefreshCw, ScanLine } from 'lucide-react';
+import { Plus, Wallet, Eye, EyeOff, Moon, Sun, Menu, RefreshCw, ScanLine, Bot } from 'lucide-react';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { collection, addDoc, serverTimestamp, doc, setDoc, writeBatch } from 'firebase/firestore';
 
@@ -14,6 +14,7 @@ import { useAppData } from './hooks/useAppData';
 // --- LAYOUT & UI (always needed, eagerly imported) ---
 import LoginPage from './components/ui/LoginPage';
 import Sidebar, { MobileMenu, AppFooter, NAV_ITEMS } from './components/layout/Sidebar';
+import AIAdvisorPanel from './components/layout/AIAdvisorPanel';
 
 // --- LAZY-LOADED VIEWS (downloaded only when first visited) ---
 const DashboardView             = lazy(() => import('./components/views/DashboardView'));
@@ -28,8 +29,6 @@ const EducationFundView         = lazy(() => import('./components/views/Educatio
 const SalarySlipArchiveView     = lazy(() => import('./components/views/SalarySlipArchiveView'));
 const IncomeDiversificationView = lazy(() => import('./components/views/IncomeDiversificationView'));
 const SavingsGoalView           = lazy(() => import('./components/views/SavingsGoalView'));
-const AIAdvisorView             = lazy(() => import('./components/views/AIAdvisorView'));
-
 // --- LAZY-LOADED MODALS ---
 const TransactionModal = lazy(() => import('./components/modals/TransactionModal'));
 const QuickAddModal    = lazy(() => import('./components/modals/QuickAddModal'));
@@ -111,6 +110,7 @@ export default function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen]         = useState(false);
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [isQuickAddModalOpen, setIsQuickAddModalOpen]       = useState(false);
+  const [isAIOpen, setIsAIOpen]                             = useState(false);
 
   // ── Demo data migration state ───────────────────────────────
   const [demoMigration, setDemoMigration] = useState(null); // null | 'prompt' | 'migrating' | 'done' | 'no_data' | 'error'
@@ -188,7 +188,11 @@ export default function App() {
       setDemoMigration('error');
     }
   }, [user, manualJson]);
-
+  // ── AI panel toggle — intercepts 'ai-advisor' nav clicks ─
+  const handleTabChange = useCallback((tab) => {
+    if (tab === 'ai-advisor') { setIsAIOpen(prev => !prev); return; }
+    setActiveTab(tab);
+  }, []);
   // ── Auth ────────────────────────────────────────────────────
   const handleLogin  = () => signInWithPopup(auth, new GoogleAuthProvider()).catch(e => alert(e.message));
   const handleLogout = () => signOut(auth);
@@ -345,8 +349,8 @@ export default function App() {
 
       {/* ── Desktop Sidebar (from Sidebar.jsx) ── */}
       <Sidebar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        activeTab={isAIOpen ? 'ai-advisor' : activeTab}
+        setActiveTab={handleTabChange}
         user={user}
         privacyMode={privacyMode}
         setPrivacyMode={setPrivacyMode}
@@ -358,8 +362,8 @@ export default function App() {
       {/* ── Mobile Hamburger Menu (from Sidebar.jsx) ── */}
       {isMobileMenuOpen && (
         <MobileMenu
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          activeTab={isAIOpen ? 'ai-advisor' : activeTab}
+          setActiveTab={handleTabChange}
           user={user}
           onLogout={handleLogout}
           onClose={() => setIsMobileMenuOpen(false)}
@@ -484,7 +488,6 @@ export default function App() {
           {activeTab === 'salary-allocator'       && <SalaryAllocatorView       categories={categories} wallets={wBals} transactions={transactions} userId={uid} appId={appId} fmt={fmt} />}
           {activeTab === 'zakat'                  && <ZakatView                 summary={summary} investments={investments} fmt={fmt} />}
           {activeTab === 'savings-goals'          && <SavingsGoalView          savingsGoals={savingsGoals} wallets={wBals} userId={uid} appId={appId} fmt={fmt} />}
-          {activeTab === 'ai-advisor'             && <AIAdvisorView            summary={summary} transactions={transactions} categories={categories} investments={investments} savingsGoals={savingsGoals} fmt={fmt} />}
           {activeTab === 'categories'             && <CategoryView              categories={categories} userId={uid} appId={appId} fmt={fmt} />}
 
           {/* Modals */}
@@ -499,8 +502,31 @@ export default function App() {
         <AppFooter APP_VERSION={APP_VERSION} />
       </main>
 
+      {/* ── AI Advisor Panel (always available, collapsible right sidebar) ── */}
+      <AIAdvisorPanel
+        isOpen={isAIOpen}
+        onToggle={() => setIsAIOpen(v => !v)}
+        summary={summary}
+        transactions={transactions}
+        categories={categories}
+        investments={investments}
+        savingsGoals={savingsGoals}
+        fmt={fmt}
+      />
+
       {/* ── Floating Action Buttons ── */}
       <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col gap-3 items-end">
+        <button
+          onClick={() => setIsAIOpen(v => !v)}
+          className={`group flex items-center gap-3 px-4 py-3 rounded-full shadow-lg transition-all duration-300 hover:scale-105 active:scale-95 min-h-[48px] border-2 ${
+            isAIOpen
+              ? 'bg-emerald-600 border-emerald-600 text-white'
+              : 'bg-white dark:bg-gray-800 hover:bg-emerald-50 dark:hover:bg-gray-700 border-emerald-600 text-emerald-600'
+          }`}
+        >
+          <span className="text-sm font-semibold hidden sm:group-hover:inline-block animate-in fade-in slide-in-from-right-2 duration-200">AI Advisor</span>
+          <Bot size={22} strokeWidth={2.5} />
+        </button>
         <button
           onClick={() => setIsQuickAddModalOpen(true)}
           className="group flex items-center gap-3 bg-white dark:bg-gray-800 hover:bg-emerald-50 dark:hover:bg-gray-700 border-2 border-emerald-600 text-emerald-600 px-4 py-3 rounded-full shadow-lg transition-all duration-300 hover:scale-105 active:scale-95 min-h-[48px]"
