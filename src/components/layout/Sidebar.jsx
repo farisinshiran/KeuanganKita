@@ -1,42 +1,150 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Wallet, PieChart, ArrowUpRight, Repeat, CreditCard, TrendingUp,
   GraduationCap, BarChart3, ScanLine, DollarSign, Heart, Settings,
-  User, Eye, EyeOff, Moon, Sun, LogOut, X, Menu, RefreshCw, Bot, Target
+  User, Eye, EyeOff, Moon, Sun, LogOut, X, Menu, RefreshCw, Bot, Target,
+  ChevronDown
 } from 'lucide-react';
 import { NavBtn } from '../ui/index';
 import { useI18n } from '../../i18n/I18nContext';
 
-export const NAV_ITEMS = [
-  { id: 'dashboard',               icon: <PieChart size={20}/>,      labelKey: 'nav.dashboard' },
-  { id: 'transactions',            icon: <ArrowUpRight size={20}/>,   labelKey: 'nav.transactions' },
-  { id: 'subscriptions',           icon: <Repeat size={20}/>,         labelKey: 'nav.subscriptions' },
-  { id: 'wallets',                 icon: <CreditCard size={20}/>,     labelKey: 'nav.wallets' },
-  { id: 'investments',             icon: <TrendingUp size={20}/>,     labelKey: 'nav.investments' },
-  { id: 'education-fund',          icon: <GraduationCap size={20}/>,  labelKey: 'nav.educationFund' },
-  { id: 'income-diversification',  icon: <BarChart3 size={20}/>,      labelKey: 'nav.incomeDiversification' },
-  { id: 'salary-slip-archive',     icon: <ScanLine size={20}/>,       labelKey: 'nav.salarySlipArchive' },
-  { id: 'salary-allocator',        icon: <DollarSign size={20}/>,     labelKey: 'nav.salaryAllocator' },
-  { id: 'zakat',                   icon: <Heart size={20}/>,          labelKey: 'nav.zakat' },
-  { id: 'savings-goals',          icon: <Target size={20}/>,         labelKey: 'nav.savingsGoals' },
-  { id: 'ai-advisor',             icon: <Bot size={20}/>,            labelKey: 'nav.aiAdvisor' },
-  { id: 'categories',              icon: <Settings size={20}/>,       labelKey: 'nav.categories' },
+const STANDALONE_ITEMS = [
+  { id: 'dashboard', icon: <PieChart size={20}/>, labelKey: 'nav.dashboard' },
 ];
+
+const NAV_GROUPS = [
+  {
+    id: 'daily',
+    labelKey: 'nav.group.daily',
+    items: [
+      { id: 'transactions',   icon: <ArrowUpRight size={20}/>, labelKey: 'nav.transactions' },
+      { id: 'subscriptions',  icon: <Repeat size={20}/>,       labelKey: 'nav.subscriptions' },
+      { id: 'wallets',        icon: <CreditCard size={20}/>,   labelKey: 'nav.wallets' },
+    ],
+  },
+  {
+    id: 'planning',
+    labelKey: 'nav.group.planning',
+    items: [
+      { id: 'investments',           icon: <TrendingUp size={20}/>,    labelKey: 'nav.investments' },
+      { id: 'education-fund',        icon: <GraduationCap size={20}/>, labelKey: 'nav.educationFund' },
+      { id: 'savings-goals',         icon: <Target size={20}/>,        labelKey: 'nav.savingsGoals' },
+      { id: 'salary-allocator',      icon: <DollarSign size={20}/>,    labelKey: 'nav.salaryAllocator' },
+      { id: 'income-diversification',icon: <BarChart3 size={20}/>,     labelKey: 'nav.incomeDiversification' },
+      { id: 'salary-slip-archive',   icon: <ScanLine size={20}/>,      labelKey: 'nav.salarySlipArchive' },
+    ],
+  },
+  {
+    id: 'tools',
+    labelKey: 'nav.group.tools',
+    items: [
+      { id: 'zakat',      icon: <Heart size={20}/>,    labelKey: 'nav.zakat' },
+      { id: 'ai-advisor', icon: <Bot size={20}/>,      labelKey: 'nav.aiAdvisor' },
+      { id: 'categories', icon: <Settings size={20}/>, labelKey: 'nav.categories' },
+    ],
+  },
+];
+
+// Flat export retained for backward compatibility
+export const NAV_ITEMS = [
+  ...STANDALONE_ITEMS,
+  ...NAV_GROUPS.flatMap(g => g.items),
+];
+
+const NavGroup = ({ group, activeTab, setActiveTab, t, openGroups, toggleGroup, onItemClick }) => {
+  const isOpen = openGroups.has(group.id);
+  const hasActive = group.items.some(item => item.id === activeTab);
+
+  return (
+    <div>
+      <button
+        onClick={() => toggleGroup(group.id)}
+        className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg transition-colors
+          ${hasActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}
+          hover:bg-gray-50 dark:hover:bg-gray-700/40`}
+      >
+        <span className="text-[11px] font-bold uppercase tracking-widest">{t(group.labelKey)}</span>
+        <ChevronDown
+          size={13}
+          className={`transition-transform duration-200 ${isOpen ? 'rotate-0' : '-rotate-90'}`}
+        />
+      </button>
+      <div className={`overflow-hidden transition-all duration-200 ${isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+        <div className="mt-0.5 space-y-0.5">
+          {group.items.map(item => (
+            <NavBtn
+              key={item.id}
+              id={item.id}
+              active={activeTab}
+              set={onItemClick || setActiveTab}
+              icon={item.icon}
+              label={t(item.labelKey)}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Sidebar = ({ activeTab, setActiveTab, user, privacyMode, setPrivacyMode, darkMode, setDarkMode, onLogout }) => {
   const { t, lang, setLang } = useI18n();
 
+  const getInitialOpenGroups = () => {
+    const open = new Set(NAV_GROUPS.map(g => g.id));
+    return open;
+  };
+  const [openGroups, setOpenGroups] = useState(getInitialOpenGroups);
+
+  // Auto-expand the group containing the active tab
+  useEffect(() => {
+    const group = NAV_GROUPS.find(g => g.items.some(item => item.id === activeTab));
+    if (group) {
+      setOpenGroups(prev => {
+        if (prev.has(group.id)) return prev;
+        const next = new Set(prev);
+        next.add(group.id);
+        return next;
+      });
+    }
+  }, [activeTab]);
+
+  const toggleGroup = (id) => {
+    setOpenGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
   return (
   <aside className="hidden md:flex flex-col w-64 bg-white dark:bg-gray-800 border-r dark:border-gray-700 h-screen sticky top-0 transition-colors duration-300">
-    <div className="p-6">
-      <div className="flex items-center gap-2 mb-8 text-emerald-700 dark:text-emerald-400">
+    <div className="p-6 flex flex-col gap-1 overflow-y-auto flex-1">
+      <div className="flex items-center gap-2 mb-6 text-emerald-700 dark:text-emerald-400">
         <Wallet className="w-8 h-8" />
         <h1 className="font-bold text-xl">{t('common.appName')}</h1>
       </div>
-      <nav className="space-y-2">
-        {NAV_ITEMS.map(item => (
+      <nav className="space-y-1">
+        {/* Dashboard standalone */}
+        {STANDALONE_ITEMS.map(item => (
           <NavBtn key={item.id} id={item.id} active={activeTab} set={setActiveTab} icon={item.icon} label={t(item.labelKey)} />
         ))}
+        {/* Divider */}
+        <div className="border-t dark:border-gray-700 my-2" />
+        {/* Grouped nav */}
+        <div className="space-y-2">
+          {NAV_GROUPS.map(group => (
+            <NavGroup
+              key={group.id}
+              group={group}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              t={t}
+              openGroups={openGroups}
+              toggleGroup={toggleGroup}
+            />
+          ))}
+        </div>
       </nav>
     </div>
 
@@ -80,6 +188,31 @@ const Sidebar = ({ activeTab, setActiveTab, user, privacyMode, setPrivacyMode, d
 export const MobileMenu = ({ activeTab, setActiveTab, user, onLogout, onClose }) => {
   const { t, lang, setLang } = useI18n();
 
+  const getInitialOpenGroups = () => new Set(NAV_GROUPS.map(g => g.id));
+  const [openGroups, setOpenGroups] = useState(getInitialOpenGroups);
+
+  useEffect(() => {
+    const group = NAV_GROUPS.find(g => g.items.some(item => item.id === activeTab));
+    if (group) {
+      setOpenGroups(prev => {
+        if (prev.has(group.id)) return prev;
+        const next = new Set(prev);
+        next.add(group.id);
+        return next;
+      });
+    }
+  }, [activeTab]);
+
+  const toggleGroup = (id) => {
+    setOpenGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleItemClick = (id) => { setActiveTab(id); onClose(); };
+
   return (
   <div className="md:hidden fixed inset-0 bg-black/50 z-40" onClick={onClose}>
     <div className="fixed right-0 top-0 bottom-0 w-72 bg-white dark:bg-gray-800 shadow-2xl z-50 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -113,17 +246,35 @@ export const MobileMenu = ({ activeTab, setActiveTab, user, onLogout, onClose })
         </div>
 
         {/* Navigation */}
-        <nav className="space-y-2">
-          {NAV_ITEMS.map(item => (
+        <nav className="space-y-1">
+          {/* Dashboard standalone */}
+          {STANDALONE_ITEMS.map(item => (
             <NavBtn
               key={item.id}
               id={item.id}
               active={activeTab}
-              set={(id) => { setActiveTab(id); onClose(); }}
+              set={handleItemClick}
               icon={item.icon}
               label={t(item.labelKey)}
             />
           ))}
+          {/* Divider */}
+          <div className="border-t dark:border-gray-700 my-2" />
+          {/* Grouped nav */}
+          <div className="space-y-2">
+            {NAV_GROUPS.map(group => (
+              <NavGroup
+                key={group.id}
+                group={group}
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                t={t}
+                openGroups={openGroups}
+                toggleGroup={toggleGroup}
+                onItemClick={handleItemClick}
+              />
+            ))}
+          </div>
         </nav>
 
         {/* Logout */}
