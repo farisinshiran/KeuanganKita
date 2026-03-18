@@ -4,7 +4,7 @@ import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 // --- CONFIG & UTILS ---
-import { auth, db, appId, APP_VERSION } from './config/firebase';
+import { auth, db, appId, APP_VERSION, IS_DEMO_MODE } from './config/firebase';
 import { formatCurrency } from './utils/formatters';
 import { useI18n } from './i18n/I18nContext';
 
@@ -256,6 +256,14 @@ export default function App() {
 
       {/* ── Main content ── */}
       <main ref={mainRef} className="flex-1 p-4 md:p-8 max-w-5xl mx-auto w-full pb-8 flex flex-col min-h-screen">
+
+        {/* Demo Mode banner */}
+        {IS_DEMO_MODE && (
+          <div className="mb-4 -mx-4 md:-mx-8 -mt-4 md:-mt-8 px-4 py-2.5 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-700 flex items-center justify-center gap-2 text-xs text-amber-800 dark:text-amber-300">
+            <span className="text-base">🧪</span>
+            <span><strong>Demo Mode</strong> — Data tersimpan di browser ini saja (localStorage). Tidak ada akun atau Firebase yang diperlukan.</span>
+          </div>
+        )}
 
         {/* Mobile top-bar */}
         <div className="md:hidden flex justify-between items-center mb-6">

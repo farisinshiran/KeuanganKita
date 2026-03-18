@@ -36,6 +36,9 @@ hub-debug.log
 emulator-data/
 .runtimeconfig.json
 
+# Firebase project alias -- contains your project ID, keep local
+.firebaserc
+
 # Environment variables
 .env
 .env.local

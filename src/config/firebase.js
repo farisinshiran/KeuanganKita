@@ -1,30 +1,42 @@
 // Firebase Configuration
-// SECURITY: Use environment variables instead of hardcoded values
-// Create a .env.local file in the project root with your Firebase config
+// SECURITY: Copy .env.example -> .env.local and fill in your Firebase project values.
+// Never commit real credentials. See README for setup instructions.
 
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyAC5_LnGPcZtLyFB091FaUfEu6_AjJsLbQ",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "dompet-keluarga-prod.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "dompet-keluarga-prod",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "dompet-keluarga-prod.firebasestorage.app",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "68401529984",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:68401529984:web:0749e9b641771b3064d265",
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-NKY1EL3HXN"
+  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId:             import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId:     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+// Warn during development if env vars are missing
+if (import.meta.env.DEV && !firebaseConfig.apiKey) {
+  console.error(
+    '[firebase.js] Firebase config is missing.\n' +
+    'Copy .env.example to .env.local and fill in your Firebase project values.'
+  );
+}
 
-// App ID constant - used for Firestore paths
-const appId = import.meta.env.VITE_APP_ID || 'dompet-keluarga-prod';
+// Initialize Firebase
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+// Firestore path namespace -- change to match your project
+const appId = import.meta.env.VITE_APP_ID || 'dompet-keluarga';
 
 // App version
 const APP_VERSION = '3.2.0';
+
+// True when no Firebase API key is configured (GitHub Pages demo, offline preview).
+// In this mode Vite aliases firebase/* to localStorage-backed mocks.
+export const IS_DEMO_MODE = !import.meta.env.VITE_FIREBASE_API_KEY;
 
 export { app, auth, db, appId, APP_VERSION };

@@ -10,17 +10,17 @@ Jika duplikasi sudah terjadi sebelumnya, ikuti langkah berikut untuk membersihka
 
 ### Step 1: Buka Firebase Console
 1. Login ke https://console.firebase.google.com
-2. Pilih project: **dompet-keluarga-prod**
+2. Pilih project: **YOUR_PROJECT_ID**
 3. Sidebar → **Firestore Database**
 
 ### Step 2: Navigate ke Wallets Collection
 ```
-Collection: artifacts/dompet-keluarga-prod/users/{userId}/wallets
+Collection: artifacts/YOUR_PROJECT_ID/users/{userId}/wallets
 ```
 
 **Cara:**
 1. Klik collection `artifacts`
-2. Klik document `dompet-keluarga-prod`
+2. Klik document `YOUR_PROJECT_ID`
 3. Klik sub-collection `users`
 4. Klik document dengan UID Anda (email login Anda)
 5. Klik sub-collection `wallets`

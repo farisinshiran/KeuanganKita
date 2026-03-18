@@ -111,7 +111,7 @@ npm run build
 firebase deploy --only hosting
 ```
 
-**URL Production:** `https://dompet-keluarga-prod.web.app`
+**URL Production:** `https://YOUR_PROJECT_ID.web.app`
 
 ### Option B: Vercel / Netlify
 
