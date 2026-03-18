@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react';
 import { Plus, Wallet, Eye, EyeOff, Moon, Sun, Menu, RefreshCw, ScanLine } from 'lucide-react';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, setDoc, writeBatch } from 'firebase/firestore';
 
 // --- CONFIG & UTILS ---
 import { auth, db, appId, APP_VERSION, IS_DEMO_MODE } from './config/firebase';
@@ -45,6 +45,60 @@ const PageLoader = ({ text }) => (
 );
 
 // ============================================================
+// DEMO → FIRESTORE MIGRATION HELPERS
+// ============================================================
+const DEMO_STORE_KEY = 'dkDemo_v1';
+
+function convertDemoTimestamps(v) {
+  if (v == null) return v;
+  if (Array.isArray(v)) return v.map(convertDemoTimestamps);
+  if (typeof v === 'object') {
+    if (typeof v.__ts === 'string') return new Date(v.__ts);
+    const out = {};
+    for (const [k, val] of Object.entries(v)) out[k] = convertDemoTimestamps(val);
+    return out;
+  }
+  return v;
+}
+
+async function migrateFromDemo(user, firestoreDb, firestoreAppId, rawJson = null) {
+  const raw = rawJson ?? localStorage.getItem(DEMO_STORE_KEY);
+  if (!raw) return { count: 0, reason: 'no_data' };
+
+  let store;
+  try { store = JSON.parse(raw); } catch { return { count: 0, reason: 'parse_error' }; }
+
+  // Flexible: match any appId and any demo uid (usually 'demo-user')
+  const toWrite = [];
+  for (const [colPath, docs] of Object.entries(store)) {
+    if (!docs || typeof docs !== 'object') continue;
+    // Pattern: artifacts/{any_appId}/users/{any_uid}/{collection}
+    const match = colPath.match(/^artifacts\/[^\/]+\/users\/[^\/]+\/(.+)$/);
+    if (!match) continue;
+    const colName = match[1];
+    for (const [docId, docData] of Object.entries(docs)) {
+      if (!docData) continue;
+      toWrite.push({ colName, docId, data: convertDemoTimestamps(docData) });
+    }
+  }
+
+  if (toWrite.length === 0) return { count: 0, reason: 'no_match' };
+
+  // Write in batches of 400 (Firestore limit is 500)
+  for (let i = 0; i < toWrite.length; i += 400) {
+    const chunk = toWrite.slice(i, i + 400);
+    const batch = writeBatch(firestoreDb);
+    for (const { colName, docId, data } of chunk) {
+      const docRef = doc(firestoreDb, 'artifacts', firestoreAppId, 'users', user.uid, colName, docId);
+      batch.set(docRef, data);
+    }
+    await batch.commit();
+  }
+
+  return { count: toWrite.length, reason: 'ok' };
+}
+
+// ============================================================
 // MAIN APP
 // ============================================================
 export default function App() {
@@ -58,6 +112,12 @@ export default function App() {
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [isQuickAddModalOpen, setIsQuickAddModalOpen]       = useState(false);
 
+  // ── Demo data migration state ───────────────────────────────
+  const [demoMigration, setDemoMigration] = useState(null); // null | 'prompt' | 'migrating' | 'done' | 'no_data' | 'error'
+  const [demoMigrateCount, setDemoMigrateCount] = useState(0);
+  const [showManualImport, setShowManualImport] = useState(false);
+  const [manualJson, setManualJson] = useState('');
+
   // ── Pull-to-Refresh (React-friendly: no page reload) ───────
   // Incrementing refreshKey causes useAppData to re-subscribe all listeners
   const [refreshKey, setRefreshKey] = useState(0);
@@ -68,7 +128,7 @@ export default function App() {
   const mainRef     = useRef(null);
 
   // ── All remote data from custom hook ───────────────────────
-  const { transactions, investments, categories, investTypes, wallets, subscriptions, savingsGoals } =
+  const { transactions, investments, categories, investTypes, wallets, subscriptions, savingsGoals, dataLoading } =
     useAppData(user, refreshKey);
 
   // ── Dark mode ───────────────────────────────────────────────
@@ -76,6 +136,58 @@ export default function App() {
     document.documentElement.classList.toggle('dark', darkMode);
     localStorage.setItem('theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
+
+  // ── Detect leftover demo data after login ───────────────────
+  useEffect(() => {
+    if (!user || IS_DEMO_MODE) return;
+    try {
+      const raw = localStorage.getItem(DEMO_STORE_KEY);
+      if (!raw) return;
+      const store = JSON.parse(raw);
+      const hasData = Object.values(store).some(col => Object.keys(col).length > 0);
+      if (hasData) setDemoMigration('prompt');
+    } catch { /* ignore */ }
+  }, [user]);
+
+  const handleMigrate = useCallback(async () => {
+    setDemoMigration('migrating');
+    try {
+      const { count, reason } = await migrateFromDemo(user, db, appId);
+      if (count === 0) {
+        setDemoMigration('no_data');
+        return;
+      }
+      localStorage.removeItem(DEMO_STORE_KEY);
+      setDemoMigrateCount(count);
+      setRefreshKey(k => k + 1);
+      setDemoMigration('done');
+      setTimeout(() => setDemoMigration(null), 6000);
+    } catch (err) {
+      console.error('[migrate] failed', err);
+      setDemoMigration('error');
+    }
+  }, [user]);
+
+  const handleManualMigrate = useCallback(async () => {
+    if (!manualJson.trim()) return;
+    setDemoMigration('migrating');
+    setShowManualImport(false);
+    try {
+      const { count, reason } = await migrateFromDemo(user, db, appId, manualJson.trim());
+      if (count === 0) {
+        setDemoMigration('no_data');
+        return;
+      }
+      setDemoMigrateCount(count);
+      setManualJson('');
+      setRefreshKey(k => k + 1);
+      setDemoMigration('done');
+      setTimeout(() => setDemoMigration(null), 6000);
+    } catch (err) {
+      console.error('[manual migrate] failed', err);
+      setDemoMigration('error');
+    }
+  }, [user, manualJson]);
 
   // ── Auth ────────────────────────────────────────────────────
   const handleLogin  = () => signInWithPopup(auth, new GoogleAuthProvider()).catch(e => alert(e.message));
@@ -262,6 +374,81 @@ export default function App() {
           <div className="mb-4 -mx-4 md:-mx-8 -mt-4 md:-mt-8 px-4 py-2.5 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-700 flex items-center justify-center gap-2 text-xs text-amber-800 dark:text-amber-300">
             <span className="text-base">🧪</span>
             <span><strong>Demo Mode</strong> — Data tersimpan di browser ini saja (localStorage). Tidak ada akun atau Firebase yang diperlukan.</span>
+          </div>
+        )}
+
+        {/* Demo → Firebase migration banner */}
+        {demoMigration === 'prompt' && (
+          <div className="mb-4 -mx-4 md:-mx-8 -mt-4 md:-mt-8 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-700 flex flex-wrap items-center justify-center gap-3 text-sm text-blue-800 dark:text-blue-300">
+            <span>📦 <strong>Data lama ditemukan.</strong> Data dari mode demo tersimpan di browser ini. Impor ke akun Firebase Anda?</span>
+            <div className="flex gap-2">
+              <button onClick={handleMigrate} className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs font-semibold">Impor Sekarang</button>
+              <button onClick={() => { localStorage.removeItem(DEMO_STORE_KEY); setDemoMigration(null); }} className="px-3 py-1 bg-white dark:bg-gray-700 border border-blue-300 dark:border-blue-600 rounded-md text-xs font-semibold">Abaikan &amp; Hapus</button>
+            </div>
+          </div>
+        )}
+        {demoMigration === 'migrating' && (
+          <div className="mb-4 -mx-4 md:-mx-8 -mt-4 md:-mt-8 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-700 flex items-center justify-center gap-2 text-sm text-blue-800 dark:text-blue-300">
+            <RefreshCw size={16} className="animate-spin" />
+            <span>Sedang mengimpor data ke Firebase…</span>
+          </div>
+        )}
+        {demoMigration === 'done' && (
+          <div className="mb-4 -mx-4 md:-mx-8 -mt-4 md:-mt-8 px-4 py-3 bg-emerald-50 dark:bg-emerald-900/20 border-b border-emerald-200 dark:border-emerald-700 flex items-center justify-center gap-2 text-sm text-emerald-800 dark:text-emerald-300">
+            <span>✅ {demoMigrateCount} data berhasil diimpor ke Firebase!</span>
+          </div>
+        )}
+        {demoMigration === 'no_data' && (
+          <div className="mb-4 -mx-4 md:-mx-8 -mt-4 md:-mt-8 px-4 py-3 bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-700 flex flex-wrap items-center justify-center gap-3 text-sm text-yellow-800 dark:text-yellow-300">
+            <span>⚠️ Data demo ditemukan di browser tapi tidak ada dokumen yang bisa diimpor.</span>
+            <button onClick={() => { localStorage.removeItem(DEMO_STORE_KEY); setDemoMigration(null); }} className="underline text-xs">Hapus data demo</button>
+          </div>
+        )}
+        {demoMigration === 'error' && (
+          <div className="mb-4 -mx-4 md:-mx-8 -mt-4 md:-mt-8 px-4 py-3 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-700 flex flex-wrap items-center justify-center gap-3 text-sm text-red-800 dark:text-red-300">
+            <span>⚠️ Gagal mengimpor. Periksa koneksi atau izin Firestore.</span>
+            <button onClick={() => setDemoMigration('prompt')} className="underline text-xs">Coba lagi</button>
+          </div>
+        )}
+
+        {/* Restore panel: shown when Firestore is empty after loading */}
+        {!IS_DEMO_MODE && !dataLoading && transactions.length === 0 && demoMigration === null && (
+          <div className="mb-4 -mx-4 md:-mx-8 -mt-4 md:-mt-8 px-4 py-2.5 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+            <span>Punya data dari browser lain atau domain lama?</span>
+            <button onClick={() => setShowManualImport(true)} className="text-blue-600 dark:text-blue-400 underline font-semibold">Pulihkan data lama</button>
+          </div>
+        )}
+
+        {/* Manual import modal */}
+        {showManualImport && (
+          <div className="fixed inset-0 z-[200] bg-black/60 flex items-center justify-center p-4" onClick={() => setShowManualImport(false)}>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg p-6" onClick={e => e.stopPropagation()}>
+              <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-1">Pulihkan Data Lama</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Data tersimpan di domain berbeda (GitHub Pages atau localhost). Ikuti langkah berikut:</p>
+
+              <ol className="text-sm text-gray-700 dark:text-gray-300 space-y-2 mb-4 list-decimal list-inside">
+                <li>Buka domain lama di browser (misal: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs">github.io/...</code> atau <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs">localhost:5173</code>)</li>
+                <li>Tekan <kbd className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-xs font-mono">F12</kbd> → Console</li>
+                <li>Ketik perintah ini lalu tekan Enter:<br/><code className="bg-gray-100 dark:bg-gray-700 block mt-1 px-2 py-1 rounded text-xs break-all select-all">copy(localStorage.getItem('dkDemo_v1'))</code></li>
+                <li>Kembali ke sini dan paste hasilnya di bawah:</li>
+              </ol>
+
+              <textarea
+                className="w-full h-32 text-xs font-mono border border-gray-300 dark:border-gray-600 rounded-lg p-2 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder='Paste JSON di sini (dimulai dari { ...)'
+                value={manualJson}
+                onChange={e => setManualJson(e.target.value)}
+              />
+
+              <div className="flex justify-end gap-2 mt-3">
+                <button onClick={() => { setShowManualImport(false); setManualJson(''); }} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Batal</button>
+                <button
+                  onClick={handleManualMigrate}
+                  disabled={!manualJson.trim()}
+                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed font-semibold"
+                >Impor Data</button>
+              </div>
+            </div>
           </div>
         )}
 

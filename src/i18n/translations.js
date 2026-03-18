@@ -35,6 +35,11 @@ export const translations = {
       savingsGoals: 'Target Tabungan',
       aiAdvisor: 'AI Advisor',
       categories: 'Kategori',
+      group: {
+        daily: 'Harian',
+        planning: 'Perencanaan',
+        tools: 'Alat',
+      },
     },
     sidebar: {
       user: 'Pengguna',
@@ -111,6 +116,11 @@ export const translations = {
       savingsGoals: 'Savings Goals',
       aiAdvisor: 'AI Advisor',
       categories: 'Categories',
+      group: {
+        daily: 'Daily',
+        planning: 'Planning',
+        tools: 'Tools',
+      },
     },
     sidebar: {
       user: 'User',
