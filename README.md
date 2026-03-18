@@ -1,386 +1,356 @@
+<div align="center">
+
 # 💰 Dompet Keluarga
 
-**Dompet Keluarga** adalah aplikasi manajemen keuangan keluarga yang komprehensif dan modern. Aplikasi ini membantu Anda mengelola pengeluaran, investasi, langganan, dan perencanaan keuangan keluarga dengan fitur-fitur canggih berbasis cloud.
+**Personal & Family Finance Management — Built with React + Firebase**
 
-![Dompet Keluarga](https://img.shields.io/badge/Status-Production-brightgreen?style=flat-square)
-![React](https://img.shields.io/badge/React-18+-blue?style=flat-square)
-![Vite](https://img.shields.io/badge/Vite-5+-purple?style=flat-square)
-![Firebase](https://img.shields.io/badge/Firebase-Firestore-orange?style=flat-square)
-![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
+*Dompet Keluarga* ("Family Wallet") is a full-featured, cloud-synced personal finance web app for Indonesian families. Track transactions, investments, savings goals, budgets, and subscriptions — all from one place.
 
-## 🌟 Fitur Utama
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-blue?style=for-the-badge&logo=github)](https://fauzanalfi.github.io/dompet-keluarga)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
+[![Firebase](https://img.shields.io/badge/Firebase-Firestore-FFA611?style=for-the-badge&logo=firebase&logoColor=white)](https://firebase.google.com)
+[![Vite](https://img.shields.io/badge/Vite-7-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3-38BDF8?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
 
-### 🤖 Quick Add - AI Receipt Scanner (NEW!)
-- **Upload & Scan**: Upload screenshot atau foto struk belanja
-- **AI-Powered OCR**: Google Cloud Vision API mendeteksi transaksi otomatis
-- **Multi-Transaction Preview**: Edit & verifikasi beberapa transaksi sekaligus
-- **Smart Categorization**: AI otomatis mengategorikan merchant
-- **Bulk Approval**: Simpan multiple transaksi dalam satu klik
-- **Date Detection**: Deteksi tanggal transaksi otomatis dari struk
-- **Editable Table**: Edit nominal, kategori, akun, tanggal, dan catatan sebelum approve
-- **Cross-Device Sync**: API key tersimpan di cloud, otomatis sync ke semua device
-- **🔒 Privacy First**: Screenshot otomatis dihapus setelah transaksi disimpan - tidak pernah tersimpan di server!
+</div>
 
-📖 **Setup Guide:** [VISION_API_QUICKSTART.md](./VISION_API_QUICKSTART.md) | 🔒 **Privacy:** [PRIVACY_SECURITY.md](./PRIVACY_SECURITY.md)
+---
 
-### 📊 Dashboard Analitik
-- **Ringkasan Aset**: Tampilkan total aset bersih, saldo kas, dan total investasi dalam satu pandangan
-- **Tren Arus Kas (6 Bulan)**: Visualisasi tren pemasukan dan pengeluaran dengan grafik line chart interaktif
-- **Tren Nilai Aset**: Monitor pertumbuhan nilai aset dengan area chart yang menampilkan modal dan nilai pasar
-- **Analisis Pengeluaran**: Pie chart untuk melihat breakdown pengeluaran kategori bulan ini
-- **Monitoring Budget**: Progress bar real-time dengan peringatan otomatis ketika budget mencapai 90%
-- **Saldo Per Akun**: Tampilan scrollable semua akun/dompet dengan saldo terkini dan indikator limit kredit
+## ✨ Features
 
-### 💳 Manajemen Transaksi
-- **Tiga Tipe Transaksi**: Pemasukan, Pengeluaran, dan Transfer antar akun
-- **Kategori Fleksibel**: 
-  - Pengeluaran: Belanja Bulanan, Makan Luar, Transportasi, Listrik & Air, Pulsa & Internet, Zakat & Infaq, Pendidikan, Cicilan Rumah, Kesehatan, Langganan, dll
-  - Pemasukan: Gaji Pokok, Bonus/THR, Sampingan, Dividen
-- **Filter & Pencarian**: Filter berdasarkan tanggal, akun/dompet untuk analisis mendalam
-- **Riwayat Lengkap**: Tabel terstruktur dengan tanggal, detail, kategori, catatan, dan jumlah
+### 📊 Dashboard & Analytics
+| Feature | Description |
+|---|---|
+| **Financial Health Score** | 0–100 score based on savings rate, budget adherence, debt ratio, and investment coverage |
+| **Cash Flow Trend** | 6-month income vs. expense line chart |
+| **Asset Growth** | Area chart tracking investment portfolio growth |
+| **Month-over-Month** | Grouped bar chart comparing top spending categories vs. prior month |
+| **Budget Monitoring** | Real-time progress bars with alerts at 90% threshold |
+| **Per-Account Balances** | Scrollable snapshot of all wallets with credit-limit indicators |
 
-### 👛 Manajemen Dompet/Akun
-- **Tipe Akun Beragam**:
-  - **Dompet Tunai** 💵 - Kas fisik
-  - **Bank** 🏦 - Rekening tabungan/giro
-  - **Kartu Kredit** 💳 - Dengan limit dan tracking utang
-  - **E-Wallet** 📱 - Dompet digital
-  - **Reksadana** 📊 - Investasi reksadana
-- **Manajemen Custom**: Tambah, edit, atau hapus akun sesuai kebutuhan
-- **Tracking Limit Kredit**: Progress bar visual untuk status penggunaan kartu kredit
+### 💳 Transactions
+- Income, Expense, and Transfer between accounts
+- Filter by date range and wallet
+- **Export to CSV** (UTF-8 BOM for Excel compatibility)
+- Automatic categorisation with full edit history
 
-### 📺 Manajemen Langganan (Subscription)
-- **Auto Icon Mapping**: 50+ layanan populer dengan icon otomatis (Netflix, Spotify, YouTube, Adobe, GitHub, Figma, dll)
-- **Kategori Langganan**: Streaming, Software, Musik, Hosting, VPN, Gaming, dll
-- **Tracking Biaya Rutin**: Monitor semua langganan berkelanjutan
-- **Custom Subscription**: Dukung langganan kustom dengan ikon pilihan
-- **Detail Lengkap**: Nama layanan, biaya, tanggal perpanjangan, dan catatan
+### 👛 Wallets
+- **Bank**, **Cash**, **Credit Card** (with limit tracking), **E-Wallet**, **PayLater** (GoPay Later, Kredivo, etc.)
+- Custom name, icon, and emoji support
+- Running balance computed from transaction history
 
-### 📈 Manajemen Investasi
-- **Jenis Investasi Bawaan**:
-  - Emas (Logam Mulia) 🥇 - Target: Rp 100 juta
-  - Saham Bluechip 📊 - Target: Rp 500 juta
-  - Reksadana Pasar Uang 📈 - Target: Rp 50 juta
-- **Tracking Dinamis**: Input pembelian, tracking nilai pasar real-time
-- **Progress Visualization**: Monitor capaian target investasi per jenis
-- **Harga Emas Real-Time**: Fetch harga emas terkini dari API eksternal
-- **Custom Investment Types**: Buat tipe investasi sesuai kebutuhan
+### 🎯 Savings Goals
+- Set a name, target amount, target date, and linked wallet
+- Progress bar with months remaining and required monthly contribution
+- Status badges: On Track / Needs Attention / Overdue / Achieved
 
-### 📅 Kontrol Pengeluaran Bulanan
-- **Fokus per Bulan**:
-  - Pilih periode bulan aktif untuk input dan monitoring
-  - Data setiap bulan tersimpan terpisah agar histori tetap rapi
-- **Input Pendapatan Terpadu**:
-  - Input manual dari beberapa sumber pendapatan
-  - Digabung dengan realisasi transaksi `income` bulan yang sama
-- **Alokasi per Kategori per Bulan**:
-  - Set alokasi berdasarkan kategori pengeluaran
-  - Input bisa lewat nominal atau persentase dari total pendapatan bulan itu
-- **Monitoring Alokasi vs Realisasi**:
-  - Realisasi menghitung transaksi `expense`, langganan otomatis, dan `investment`
-  - Tabel status per kategori: aman, pas, atau melebihi alokasi
-- **Riwayat Transaksi Bulan Berjalan**:
-  - Tabel lengkap semua transaksi (pengeluaran, pemasukan, investasi, transfer) pada bulan yang dipilih
-  - Tampil tanggal, tipe, kategori, keterangan, rekening, dan nominal
-  - Transaksi diurutkan dari yang terbaru
-- **Carry-over Manual**:
-  - Bawa sisa alokasi dari bulan sebelumnya hanya saat pengguna memilih
-- **Auto-Save Firestore**:
-  - Perubahan tersimpan otomatis per bulan
-- **Visualisasi Pie Chart**: Lihat distribusi alokasi kategori secara visual
-- **Fitur Reset Bulanan**: Reset isian untuk bulan terpilih tanpa mempengaruhi bulan lain
+### 📅 Budget Wizard & Salary Allocator
+- **5-step Budget Wizard**: choose 50/30/20, 70/20/10, or fully custom % splits
+- Per-category monthly allocation with auto-save to Firestore
+- **Salary Allocator**: multi-source income, carry-over from previous month, pie-chart visualisation
+- Monthly transaction history table with totals
 
-### �📝 Zakat Calculator
-- **Perhitungan Zakat**: Hitung zakat berdasarkan jenis investasi (emas, saham, reksadana)
-- **Nisab Emas**: Perhitungan otomatis berdasarkan harga emas terkini
-- **Summary by Type**: Breakdown zakat per jenis investasi
-- **Islamic Finance**: Sesuai dengan prinsip keuangan Islam
+### 📈 Investments
+- Gold, stocks, mutual funds, and custom asset types
+- Market value tracking with unrealised P&L per asset
+- Zakat calculator with real-time gold-price integration
 
-### 🏷️ Manajemen Kategori
-- **Custom Categories**: Buat kategori pengeluaran/pemasukan sesuai kebutuhan keluarga
-- **Budget Setting**: Set budget target untuk setiap kategori
-- **Edit & Hapus**: Kelola kategori dengan mudah
-- **Validasi Otomatis**: Cegah duplikasi kategori
+### 📺 Subscriptions
+- Auto-icon mapping for 50+ popular services (Netflix, Spotify, Adobe, GitHub…)
+- Renewal date tracking and monthly cost summary
 
-### 💱 Multi-Currency Support
-Mendukung 7 mata uang utama:
-- **IDR** - Rupiah (Rp) [Default]
-- **USD** - US Dollar ($)
-- **SGD** - Singapore Dollar (S$)
-- **EUR** - Euro (€)
-- **MYR** - Malaysian Ringgit (RM)
-- **JPY** - Japanese Yen (¥)
-- **AUD** - Australian Dollar (A$)
+### 🤖 AI Financial Advisor
+- Chat interface powered by **Google Gemini** or any **OpenRouter** model (incl. free Llama 3.3, Qwen3)
+- Contextual prompts auto-populated with your current financial snapshot
+- API keys stored only in `localStorage` — never sent to the app server
 
-Dengan **real-time exchange rate** fetching dari API eksternal.
+### 📸 Quick Add — Receipt Scanner
+- Upload a receipt screenshot → Google Cloud Vision OCR extracts line items automatically
+- Multi-transaction preview table: edit amount, category, account, date
+- Privacy-first: the image is deleted from memory immediately after saving; it is **never** stored in Firebase
 
-### 🌙 Dark Mode
-- **Tema Gelap Penuh**: Mendukung dark mode di semua halaman dan komponen
-- **System Preference**: Auto-detect tema berdasarkan preferensi sistem
-- **Toggle Mudah**: Switch antar mode dengan satu klik
+### 🌐 Other
+| | |
+|---|---|
+| **Multi-currency** | IDR, USD, SGD, EUR, MYR, JPY, AUD with live exchange rates |
+| **Bahasa / English** | Full i18n toggle |
+| **Dark mode** | Full dark theme across all views |
+| **Privacy mode** | Replace all numbers with bullets ( • ) |
+| **Education Fund** | Dedicated savings planner for education costs |
+| **Income Diversification** | Track multiple income streams |
+| **Salary Slip Archive** | Store and parse payslip PDFs |
+| **Google Sign-In** | Firebase Auth — one-click, no passwords |
+| **Real-time sync** | `onSnapshot` Firestore listeners |
+| **Mobile-first** | Responsive layout with pull-to-refresh |
 
-### 🔒 Privacy Mode
-- **Tersembunyi Nilai Finansial**: Gantikan angka dengan bullet points (•) pada dashboard
-- **Keamanan Data**: Tampilkan hanya data yang diperlukan
+---
 
-### 🔐 Keamanan & Autentikasi
-- **Google OAuth**: Login aman dengan akun Google
-- **Firebase Authentication**: Autentikasi terpercaya
-- **Firestore Database**: Penyimpanan cloud yang aman
-- **User-Specific Data**: Setiap pengguna melihat hanya data miliknya
+## 🛠 Tech Stack
 
-## 🛠️ Tech Stack
+| Layer | Technology |
+|---|---|
+| Framework | React 19 + Vite 7 |
+| Styling | Tailwind CSS v3 |
+| Database | Firebase Firestore (real-time) |
+| Auth | Firebase Authentication (Google OAuth 2.0) |
+| Charts | Recharts |
+| Icons | Lucide React |
+| AI | Google Gemini API, OpenRouter API |
+| OCR | Google Cloud Vision API |
+| i18n | Custom `useI18n` hook + `translations.js` |
 
-- **Frontend**: React 18+ dengan Vite untuk fast refresh
-- **Styling**: Tailwind CSS dengan dark mode support
-- **Backend/Database**: Firebase + Firestore
-- **Authentication**: Firebase Auth (Google Sign-In)
-- **AI/ML**: Google Cloud Vision API (OCR & Text Detection)
-- **Charts**: Recharts untuk visualisasi data interaktif
-- **Icons**: Lucide React untuk UI icons
-- **Formatting**: Intl API untuk currency dan date formatting
-- **Build Tool**: Vite 5+
-
-## 📋 Prerequisites
-
-- Node.js v16+ atau lebih tinggi
-- npm atau yarn
-- Akun Firebase (production atau development)
+---
 
 ## 🚀 Getting Started
 
-### 1. Clone Repository
-```bash
-git clone https://github.com/yourusername/dompet-keluarga.git
-cd dompet-keluarga
-```
+### Prerequisites
+- **Node.js ≥ 18**
+- A [Firebase project](https://console.firebase.google.com) (free Spark plan is sufficient)
 
-### 2. Install Dependencies
+### 1. Clone & install
+
 ```bash
+git clone https://github.com/YOUR_USERNAME/dompet-keluarga.git
+cd dompet-keluarga
 npm install
 ```
 
-### 3. Setup Firebase Configuration
-Edit `src/App.jsx` dan pastikan konfigurasi Firebase sudah benar:
-```javascript
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-storage-bucket.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID",
-  measurementId: "YOUR_MEASUREMENT_ID"
-};
+### 2. Configure environment variables
+
+```bash
+cp .env.example .env.local
 ```
 
-### 4. Setup Google Cloud Vision API (for Quick Add feature)
-Untuk menggunakan fitur Quick Add AI Scanner, ikuti panduan setup:
-- **Quick Start (5 menit):** [VISION_API_QUICKSTART.md](./VISION_API_QUICKSTART.md)
-- **Panduan Lengkap:** [QUICK_ADD_SETUP.md](./QUICK_ADD_SETUP.md)
+Open `.env.local` and paste your Firebase project values (found in **Project Settings → General → Your apps → SDK setup**):
 
-**Ringkas:**
-1. Buat project di Google Cloud Console
-2. Enable Cloud Vision API
-3. Setup billing (1000 request/bulan GRATIS)
-4. Create API Key
-5. Paste API Key di aplikasi saat pertama kali menggunakan Quick Add
-
-### 5. Setup Firestore Rules
-Pastikan Firestore rules di Firebase Console sudah dikonfigurasi untuk keamanan:
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{userId}/{document=**} {
-      allow read, write: if request.auth.uid == userId;
-    }
-  }
-}
+```env
+VITE_FIREBASE_API_KEY=AIzaSy...
+VITE_FIREBASE_AUTH_DOMAIN=my-project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=my-project
+VITE_FIREBASE_STORAGE_BUCKET=my-project.firebasestorage.app
+VITE_FIREBASE_MESSAGING_SENDER_ID=123456789
+VITE_FIREBASE_APP_ID=1:123456789:web:abc123
+VITE_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
+VITE_APP_ID=dompet-keluarga   # Firestore root namespace — change freely
 ```
 
-### 6. Jalankan Development Server
+### 3. Enable Google Sign-In
+
+1. Firebase Console → **Authentication → Sign-in method**
+2. Enable **Google**
+3. Add `http://localhost:5173` to **Authorized domains**
+
+### 4. Deploy Firestore security rules
+
+```bash
+# Install Firebase CLI if needed
+npm install -g firebase-tools
+firebase login
+
+# Copy .env.example to .firebaserc (fill in your project ID), then:
+firebase deploy --only firestore:rules
+```
+
+Or paste the contents of [`firestore.rules`](firestore.rules) manually in the Firebase Console.
+
+### 5. Run locally
+
 ```bash
 npm run dev
+# → http://localhost:5173
 ```
 
-Aplikasi akan berjalan di `http://localhost:5173`
+---
 
-### 7. Build untuk Production
+## 🌐 Deploy
+
+### Demo Mode (GitHub Pages without Firebase)
+
+The app has a built-in **Demo Mode** that activates automatically when `VITE_FIREBASE_API_KEY` is not set.  
+In Demo Mode:
+
+- No Firebase account or project required — works fully offline
+- All data is stored in **`localStorage`** on the visitor's browser
+- A banner is shown at the top of the app making it clear it is a demo
+- The Firebase SDK is completely excluded from the bundle (saves ~340 KB)
+- Sign-in is instant with a pre-populated "Demo User"
+
+To deploy the live demo on GitHub Pages:
+
+1. **Push the repo to GitHub.**
+2. Enable Pages: **Settings → Pages → Source → GitHub Actions**
+3. **Do NOT add any Firebase secrets** — leave them all blank (or simply skip step 3 of Option A)
+4. Push to `main` → the workflow builds and deploys automatically in Demo Mode
+
+### Option A — GitHub Pages (with Firebase backend)
+
+For a fully functional deployment where each user has their own cloud-synced data:
+
+1. **Push the repo to GitHub.**
+
+2. Enable Pages: **Settings → Pages → Source → GitHub Actions**
+
+3. Add your Firebase credentials as repository secrets:
+   **Settings → Secrets and variables → Actions → New repository secret**
+
+   | Secret name | Value |
+   |---|---|
+   | `VITE_FIREBASE_API_KEY` | Your API key |
+   | `VITE_FIREBASE_AUTH_DOMAIN` | `your-project.firebaseapp.com` |
+   | `VITE_FIREBASE_PROJECT_ID` | `your-project` |
+   | `VITE_FIREBASE_STORAGE_BUCKET` | `your-project.firebasestorage.app` |
+   | `VITE_FIREBASE_MESSAGING_SENDER_ID` | Sender ID |
+   | `VITE_FIREBASE_APP_ID` | App ID |
+   | `VITE_FIREBASE_MEASUREMENT_ID` | `G-XXXXXXXXXX` |
+   | `VITE_APP_ID` | `dompet-keluarga` |
+
+4. **Push to `main`** → the [deploy workflow](.github/workflows/deploy.yml) builds and publishes automatically.
+
+5. Add the Pages URL to Firebase Auth **Authorized domains** (e.g. `YOUR_USERNAME.github.io`).
+
+> The workflow automatically sets `VITE_BASE_URL=/dompet-keluarga/` so all asset paths resolve correctly under the sub-path.
+
+### Option B — Firebase Hosting
+
 ```bash
 npm run build
+firebase deploy --only hosting
 ```
 
-### 8. Preview Production Build
+### Option C — Any static host (Netlify, Vercel, Cloudflare Pages…)
+
 ```bash
-npm run preview
+npm run build   # output: dist/
 ```
+
+Upload the `dist/` folder. For Netlify/Vercel, set the build command to `npm run build` and publish directory to `dist`. Remember to add the hosting domain to Firebase Auth **Authorized domains**.
+
+---
 
 ## 📁 Project Structure
 
 ```
-src/
-├── App.jsx                     # Main application component
-├── App.css                     # Global styles
-├── main.jsx                    # Entry point
-├── index.css                   # Base styles
-├── assets/                     # Static assets
-├── components/
-│   ├── layout/                 # Layout components (Sidebar, Header)
-│   ├── modals/                 # Modal dialogs (QuickAdd, etc.)
-│   ├── ui/                     # Reusable UI components
-│   └── views/                  # Page-level view components
-│       ├── DashboardView.jsx
-│       ├── TransactionView.jsx
-│       ├── WalletView.jsx
-│       ├── SubscriptionView.jsx
-│       ├── InvestmentView.jsx
-│       ├── SalaryAllocatorView.jsx  # Monthly control + transaction history
-│       ├── SalarySlipArchiveView.jsx
-│       ├── ZakatView.jsx
-│       ├── CategoryView.jsx
-│       └── ...
-├── config/
-│   └── firebase.js             # Firebase configuration
-├── constants/                  # App constants
-├── hooks/                      # Custom React hooks
-├── i18n/                       # Internationalization (id/en)
-└── utils/
-    └── formatters.js           # Currency & date formatters
+dompet-keluarga/
+├── .env.example                # Environment variable template
+├── .github/
+│   └── workflows/
+│       └── deploy.yml          # GitHub Actions — build & deploy to Pages
+├── firestore.rules             # Firestore security rules
+├── firestore.indexes.json      # Firestore composite indexes
+├── public/
+│   └── manifest.json           # PWA manifest
+└── src/
+    ├── App.jsx                 # Root: auth, routing, global state
+    ├── config/
+    │   └── firebase.js         # Firebase initialisation (env-var driven)
+    ├── components/
+    │   ├── layout/
+    │   │   └── Sidebar.jsx     # Navigation sidebar
+    │   ├── modals/
+    │   │   ├── BudgetWizard.jsx       # 5-step budget setup wizard
+    │   │   ├── TransactionModal.jsx   # Add/edit transaction
+    │   │   └── QuickAddModal.jsx      # Receipt scanner (Vision API)
+    │   ├── ui/
+    │   │   ├── index.jsx       # Shared UI primitives (Card, NavBtn…)
+    │   │   └── LoginPage.jsx
+    │   └── views/              # Full-page view components (lazy-loaded)
+    │       ├── DashboardView.jsx
+    │       ├── TransactionView.jsx
+    │       ├── WalletView.jsx
+    │       ├── SavingsGoalView.jsx
+    │       ├── AIAdvisorView.jsx
+    │       ├── InvestmentView.jsx
+    │       ├── SalaryAllocatorView.jsx
+    │       ├── SubscriptionView.jsx
+    │       ├── CategoryView.jsx
+    │       ├── ZakatView.jsx
+    │       └── ...
+    ├── constants/              # Category lists, currency config, service icons
+    ├── hooks/
+    │   └── useAppData.js       # Firestore onSnapshot listeners for all collections
+    ├── i18n/
+    │   ├── I18nContext.jsx
+    │   └── translations.js     # Indonesian + English strings
+    └── utils/
+        ├── api.js              # External API helpers (exchange rate, gold price)
+        ├── formatters.js       # Currency & date formatting (Intl API)
+        ├── healthScore.js      # Financial Health Score calculator
+        └── parsers/            # Receipt / Vision API parsing utilities
 ```
-
-## 🔄 Data Flow
-
-```
-Google Auth
-    ↓
-Firestore Database
-    ↓
-App State (React Hooks)
-    ↓
-Components (Dashboard, Transactions, Wallets, etc.)
-    ↓
-UI Rendering & User Interaction
-```
-
-## 📊 Database Schema (Firestore)
-
-### Collections
-
-- **users/{userId}/transactions** - Riwayat transaksi
-- **users/{userId}/wallets** - Data akun/dompet
-- **users/{userId}/categories** - Kategori custom
-- **users/{userId}/subscriptions** - Data langganan
-- **users/{userId}/investments** - Data investasi
-- **users/{userId}/investmentTypes** - Jenis investasi
-
-## 🎨 Color Scheme & Theme
-
-- **Primary**: Emerald (#10B981) - Untuk aksi positif
-- **Secondary**: Blue (#3B82F6) - Untuk informasi
-- **Warning**: Amber (#F59E0B) - Untuk peringatan
-- **Danger**: Red (#EF4444) - Untuk pengeluaran/alert
-- **Accent**: Purple (#8B5CF6), Pink (#EC4899), Indigo (#6366F1)
-
-## 🌐 External APIs
-
-- **Exchange Rate API**: Untuk fetch real-time currency exchange rates
-- **Gold Price API**: Untuk fetch harga emas terkini
-- **Google Cloud Vision API**: Untuk OCR & text detection di Quick Add feature
-
-## 📱 Responsive Design
-
-- Mobile-first approach
-- Breakpoints: sm (640px), md (768px), lg (1024px), xl (1280px)
-- Fully responsive pada semua ukuran layar
-
-## 🔔 Features Highlights
-
-| Feature | Status | Description |
-|---------|--------|-------------|
-| **Quick Add AI Scanner** | ✅ | Upload receipt & auto-detect transactions |
-| Dashboard Analytics | ✅ | Real-time financial overview |
-| Transaction Management | ✅ | Income, Expense, Transfer tracking |
-| Wallet Management | ✅ | Multi-wallet support with limits |
-| Subscription Tracker | ✅ | Auto icon mapping untuk 50+ services |
-| Investment Tracking | ✅ | Multiple asset types dengan targets |
-| Salary Allocator | ✅ | Monthly budget allocation with transaction history |
-| Zakat Calculator | ✅ | Islamic finance calculations |
-| Budget Monitoring | ✅ | Real-time alerts & progress tracking |
-| Multi-Currency | ✅ | 7 major currencies support |
-| Dark Mode | ✅ | Full dark theme support |
-| Privacy Mode | ✅ | Hide sensitive financial data |
-| Google Auth | ✅ | Secure authentication |
-| Cloud Sync | ✅ | Real-time Firestore sync |
-
-## 🛡️ Security Considerations
-
-1. **Never commit Firebase credentials** - Gunakan environment variables
-2. **Firestore Rules** - Implementasikan security rules yang ketat
-3. **HTTPS Only** - Deploy hanya dengan HTTPS
-4. **Data Encryption** - Sensitive data dienkripsi di Firestore
-5. **Auth Validation** - Server-side validation di backend rules
-6. **Vision API Key** - Restrict by domain & API untuk security
-
-## 🐛 Troubleshooting
-
-### Firebase Connection Error
-- Pastikan konfigurasi Firebase benar
-- Cek Firebase Console untuk status layanan
-- Verifikasi Firestore region
-
-### Vision API Error (Quick Add)
-- Pastikan API Key sudah benar
-- Cek apakah Vision API sudah enabled
-- Verifikasi billing account terhubung
-- Lihat [QUICK_ADD_SETUP.md](./QUICK_ADD_SETUP.md) untuk detail
-
-### Exchange Rate API Error
-- Cek koneksi internet
-- Verify API rate limits
-- Check API documentation
-
-### Gold Price Fetch Fails
-- Verify API endpoint accessibility
-- Check CORS configuration
-- Monitor API service status
-
-## 📈 Performance Optimization
-
-- Lazy loading untuk chart components
-- Memoization dengan `useMemo` untuk data processing
-- Efficient filtering dan sorting algorithms
-- Optimized Firestore queries dengan indexing
-
-## 🤝 Contributing
-
-Kami menerima kontribusi! Silakan:
-
-1. Fork repository
-2. Buat feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push ke branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📄 License
-
-Proyek ini dilisensikan di bawah MIT License - lihat file [LICENSE](LICENSE) untuk detail.
-
-## 📧 Support & Contact
-
-Untuk pertanyaan, saran, atau laporan bug:
-- Open an issue di GitHub
-- Email: support@dompet-keluarga.com
-
-## 🙏 Acknowledgments
-
-- [React](https://react.dev) - UI library
-- [Vite](https://vitejs.dev) - Build tool
-- [Firebase](https://firebase.google.com) - Backend services
-- [Tailwind CSS](https://tailwindcss.com) - Styling
-- [Recharts](https://recharts.org) - Chart visualization
-- [Lucide Icons](https://lucide.dev) - Icon library
 
 ---
 
-**Dompet Keluarga** - Kelola Keuangan Keluarga dengan Bijak 💚
+## 🗄 Database Schema
+
+All data lives under `/artifacts/{VITE_APP_ID}/users/{uid}/`:
+
+| Collection | Description |
+|---|---|
+| `transactions` | Income, expense, transfer records |
+| `wallets` | Account definitions (bank, CC, e-wallet…) |
+| `categories` | Custom categories with monthly budget |
+| `subscriptions` | Recurring service subscriptions |
+| `investments` | Individual investment positions |
+| `investmentTypes` | Custom asset types (gold, stocks…) |
+| `savings_goals` | Savings targets with progress tracking |
+| `monthly_controls/{month}` | Salary allocation snapshots per month |
+| `settings/visionApi` | Vision API key (user-scoped, encrypted by Firestore rules) |
+
+---
+
+## 🔒 Security
+
+- **No secrets in source code** — all credentials loaded via `import.meta.env` from `.env.local` (git-ignored).
+- **Firestore rules enforce per-user isolation** — users can only read/write their own documents (`request.auth.uid == userId`).
+- **AI API keys are localStorage-only** — never persisted to Firestore or transmitted to any first-party server.
+- **Vision API images are ephemeral** — deleted from memory immediately after transaction extraction; never written to Firebase Storage.
+- **`.firebaserc` is git-ignored** — your Firebase project alias stays local.
+
+See [`PRIVACY_SECURITY.md`](PRIVACY_SECURITY.md) for a full security audit.
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Here's how:
+
+1. **Fork** the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Commit with a clear message: `git commit -m 'feat: add your feature'`
+4. Push and open a **Pull Request** against `main`
+
+Please follow these guidelines:
+- Keep PRs focused — one feature or fix per PR
+- Run `npm run lint` before pushing
+- Don't commit `.env.local` or `dist/`
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- [React](https://react.dev) — UI library
+- [Vite](https://vitejs.dev) — Build tool
+- [Firebase](https://firebase.google.com) — Auth & database
+- [Tailwind CSS](https://tailwindcss.com) — Styling
+- [Recharts](https://recharts.org) — Chart library
+- [Lucide Icons](https://lucide.dev) — Icon set
+- [Budggt](https://budggt.com) — Feature inspiration
+
+---
+
+<div align="center">
+
+**Dompet Keluarga** — Kelola Keuangan Keluarga dengan Bijak 💚
+
+Made with ❤️ for Indonesian families
+
+</div>
+
+

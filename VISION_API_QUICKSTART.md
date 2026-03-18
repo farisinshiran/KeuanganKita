@@ -17,7 +17,7 @@
 APIs & Services > Credentials > [Your API Key]
 - Application restrictions: 
   - HTTP referrers
-  - Add: https://dompet-keluarga-prod.web.app/*
+  - Add: https://YOUR_PROJECT_ID.web.app/*
 - API restrictions:
   - Restrict key
   - Select: Cloud Vision API only

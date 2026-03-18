@@ -86,8 +86,8 @@ firebase deploy --only hosting
 ```
 ✔  Deploy complete!
 
-Project Console: https://console.firebase.google.com/project/dompet-keluarga-prod/overview
-Hosting URL: https://dompet-keluarga-prod.web.app
+Project Console: https://console.firebase.google.com/project/YOUR_PROJECT_ID/overview
+Hosting URL: https://YOUR_PROJECT_ID.web.app
 ```
 
 ### Step 3: Update Vision API Restrictions
@@ -102,8 +102,8 @@ Hosting URL: https://dompet-keluarga-prod.web.app
    - Pilih "HTTP referrers"
    - Add domain production:
      ```
-     https://dompet-keluarga-prod.web.app/*
-     https://dompet-keluarga-prod.firebaseapp.com/*
+     https://YOUR_PROJECT_ID.web.app/*
+     https://YOUR_PROJECT_ID.firebaseapp.com/*
      ```
 
 4. **Save**
@@ -111,7 +111,7 @@ Hosting URL: https://dompet-keluarga-prod.web.app
 ### Step 4: Post-Deploy Testing
 
 **Test di Production URL:**
-- [ ] Open: https://dompet-keluarga-prod.web.app
+- [ ] Open: https://YOUR_PROJECT_ID.web.app
 - [ ] Login dengan Google
 - [ ] Test Quick Add:
   - [ ] Input API Key pertama kali
