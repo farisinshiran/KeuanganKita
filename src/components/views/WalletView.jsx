@@ -74,6 +74,7 @@ const WalletView = ({ wallets, transactions, userId, appId, fmt }) => {
              <option value="ewallet">E-Wallet</option>
              <option value="cash">Tunai</option>
              <option value="credit_card">Kartu Kredit</option>
+             <option value="paylater">PayLater (GoPay Later, Kredivo, dll.)</option>
              <option value="rdn">RDN (Rekening Dana Nasabah)</option>
            </select>
         </div>
@@ -110,6 +111,7 @@ const WalletView = ({ wallets, transactions, userId, appId, fmt }) => {
                      w.type === 'ewallet' ? <Smartphone size={24} className="text-emerald-600 dark:text-emerald-400"/> :
                      w.type === 'cash' ? <Banknote size={24} className="text-emerald-600 dark:text-emerald-400"/> :
                      w.type === 'credit_card' ? <CreditCard size={24} className="text-red-500"/> :
+                     w.type === 'paylater' ? <CreditCard size={24} className="text-orange-500"/> :
                      <Briefcase size={24} className="text-amber-600 dark:text-amber-400"/>
                    )}
                  </div>
@@ -126,9 +128,9 @@ const WalletView = ({ wallets, transactions, userId, appId, fmt }) => {
              <div className="mt-4 pt-4 border-t border-dashed dark:border-gray-700">
                <div className="flex justify-between items-end mb-1">
                  <div>
-                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{w.type === 'credit_card' ? 'Total Tagihan' : 'Saldo Saat Ini'}</p>
-                   <p className={`text-xl font-bold ${w.type === 'credit_card' ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                     {w.type === 'credit_card' ? fmt(Math.abs(w.currentBalance)) : fmt(w.currentBalance)}
+                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{w.type === 'credit_card' || w.type === 'paylater' ? 'Total Tagihan' : 'Saldo Saat Ini'}</p>
+                   <p className={`text-xl font-bold ${w.type === 'credit_card' || w.type === 'paylater' ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                     {w.type === 'credit_card' || w.type === 'paylater' ? fmt(Math.abs(w.currentBalance)) : fmt(w.currentBalance)}
                    </p>
                  </div>
                  {w.initialBalance !== 0 && <span className="text-[10px] text-gray-400">Awal: {fmt(w.initialBalance)}</span>}
@@ -162,6 +164,7 @@ const WalletView = ({ wallets, transactions, userId, appId, fmt }) => {
                       selectedWallet.type === 'ewallet' ? <Smartphone size={28}/> :
                       selectedWallet.type === 'cash' ? <Banknote size={28}/> :
                       selectedWallet.type === 'credit_card' ? <CreditCard size={28}/> :
+                      selectedWallet.type === 'paylater' ? <CreditCard size={28} className="text-orange-400"/> :
                       <Briefcase size={28}/>
                     )}
                   </div>

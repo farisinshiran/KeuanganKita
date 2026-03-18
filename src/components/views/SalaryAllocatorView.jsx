@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Plus, Trash2, RefreshCw, Target, DollarSign, AlertTriangle, CheckCircle, CalendarDays, ArrowLeftRight, BarChart3, Receipt } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, Target, DollarSign, AlertTriangle, CheckCircle, CalendarDays, ArrowLeftRight, BarChart3, Receipt, Wand2 } from 'lucide-react';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import BudgetWizard from '../modals/BudgetWizard';
 import { db } from '../../config/firebase';
 import { PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip, Legend } from 'recharts';
 import { useI18n } from '../../i18n/I18nContext';
@@ -39,6 +40,7 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
   const [selectedWallet, setSelectedWallet] = useState('');
   const [isMonthLoading, setIsMonthLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState(null);
 
   const isHydratingRef = useRef(false);
@@ -503,8 +505,21 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
           <button onClick={handleResetCurrentMonth} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex gap-2 items-center transition-colors">
             <RefreshCw size={16}/> {t('salaryAllocator.reset')}
           </button>
+          <button onClick={() => setIsWizardOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex gap-2 items-center transition-colors">
+            <Wand2 size={16}/> Budget Wizard
+          </button>
         </div>
       </div>
+
+      <BudgetWizard
+        isOpen={isWizardOpen}
+        onClose={() => setIsWizardOpen(false)}
+        categories={categories}
+        wallets={wallets}
+        userId={userId}
+        appId={appId}
+        selectedMonth={selectedMonth}
+      />
 
       <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center justify-between">
         <div>

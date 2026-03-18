@@ -24,6 +24,7 @@ export function useAppData(user, refreshKey = 0) {
   const [investTypes, setInvestTypes]     = useState([]);
   const [wallets, setWallets]             = useState([]);
   const [subscriptions, setSubscriptions] = useState([]);
+  const [savingsGoals, setSavingsGoals]   = useState([]);
   const [dataLoading, setDataLoading]     = useState(true);
 
   // Seed guards — reset when user or refreshKey changes
@@ -115,6 +116,12 @@ export function useAppData(user, refreshKey = 0) {
       s => setSubscriptions(s.docs.map(d => ({ id: d.id, ...d.data() })))
     );
 
+    // ── Savings Goals ───────────────────────────────────────
+    const unsubGoals = onSnapshot(
+      query(base('savings_goals')),
+      s => setSavingsGoals(s.docs.map(d => ({ id: d.id, ...d.data() })))
+    );
+
     return () => {
       unsubTrans();
       unsubInv();
@@ -122,9 +129,10 @@ export function useAppData(user, refreshKey = 0) {
       unsubInvTypes();
       unsubWallets();
       unsubSubs();
+      unsubGoals();
     };
   }, [user, refreshKey]);
 
 
-  return { transactions, investments, categories, investTypes, wallets, subscriptions, dataLoading };
+  return { transactions, investments, categories, investTypes, wallets, subscriptions, savingsGoals, dataLoading };
 }
