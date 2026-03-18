@@ -10,12 +10,42 @@ const LS_OR_MODEL   = 'ai_advisor_openrouter_model';
 
 // ── OpenRouter model options ───────────────────────────────────────────────
 const OR_MODELS = [
-  { value: 'google/gemini-2.0-flash',                        label: 'Gemini 2.0 Flash' },
-  { value: 'meta-llama/llama-3.3-70b-instruct:free',         label: 'Llama 3.3 70B (Free)' },
+  // ── Google ────────────────────────────────────────────────────────────────
+  { value: 'google/gemini-2.0-flash',                         label: 'Gemini 2.0 Flash' },
+  { value: 'google/gemini-2.5-flash-lite',                    label: 'Gemini 2.5 Flash Lite' },
+  { value: 'google/gemini-3-flash-preview',                   label: 'Gemini 3 Flash Preview' },
+  // ── OpenAI ────────────────────────────────────────────────────────────────
+  { value: 'openai/gpt-5-nano',                               label: 'GPT-5 Nano' },
+  { value: 'openai/gpt-5-mini',                               label: 'GPT-5 Mini' },
+  { value: 'openai/gpt-5',                                    label: 'GPT-5' },
+  { value: 'openai/gpt-5.4-mini',                             label: 'GPT-5.4 Mini' },
+  // ── Anthropic ─────────────────────────────────────────────────────────────
+  { value: 'anthropic/claude-3.7-sonnet',                     label: 'Claude 3.7 Sonnet' },
+  { value: 'anthropic/claude-sonnet-4.5',                     label: 'Claude Sonnet 4.5' },
+  { value: 'anthropic/claude-opus-4',                         label: 'Claude Opus 4' },
+  // ── Meta ──────────────────────────────────────────────────────────────────
+  { value: 'meta-llama/llama-3.3-70b-instruct',               label: 'Llama 3.3 70B' },
+  { value: 'meta-llama/llama-4-scout',                        label: 'Llama 4 Scout' },
+  // ── DeepSeek ──────────────────────────────────────────────────────────────
   { value: 'deepseek/deepseek-chat',                          label: 'DeepSeek V3' },
-  { value: 'anthropic/claude-3-haiku',                        label: 'Claude 3 Haiku' },
-  { value: 'mistralai/mistral-7b-instruct:free',              label: 'Mistral 7B (Free)' },
-  { value: 'qwen/qwen3-8b:free',                              label: 'Qwen3 8B (Free)' },
+  { value: 'deepseek/deepseek-v3.2',                          label: 'DeepSeek V3.2' },
+  // ── Mistral ───────────────────────────────────────────────────────────────
+  { value: 'mistralai/mistral-small-2603',                    label: 'Mistral Small 4' },
+  // ── Qwen ──────────────────────────────────────────────────────────────────
+  { value: 'qwen/qwen3-8b',                                   label: 'Qwen3 8B' },
+  { value: 'qwen/qwen3-14b',                                  label: 'Qwen3 14B' },
+  // ── xAI ───────────────────────────────────────────────────────────────────
+  { value: 'x-ai/grok-3-mini',                                label: 'Grok 3 Mini' },
+  { value: 'x-ai/grok-4-fast',                                label: 'Grok 4 Fast' },
+  // ── Free ──────────────────────────────────────────────────────────────────
+  { value: 'openrouter/free',                                 label: 'Free Router (Otomatis)' },
+  { value: 'openai/gpt-oss-120b:free',                        label: 'GPT-OSS 120B (Free)' },
+  { value: 'meta-llama/llama-3.3-70b-instruct:free',          label: 'Llama 3.3 70B (Free)' },
+  { value: 'minimax/minimax-m2.5:free',                       label: 'MiniMax M2.5 (Free)' },
+  { value: 'mistralai/mistral-small-3.1-24b-instruct:free',   label: 'Mistral Small 3.1 24B (Free)' },
+  { value: 'google/gemma-3-27b-it:free',                      label: 'Gemma 3 27B (Free)' },
+  { value: 'nvidia/nemotron-3-super-120b-a12b:free',          label: 'Nemotron 3 Super 120B (Free)' },
+  { value: 'qwen/qwen3-4b:free',                              label: 'Qwen3 4B (Free)' },
 ];
 
 const QUICK_PROMPTS = [
