@@ -323,3 +323,25 @@ export function onSnapshot(ref, onNext, _onError) {
 
   return unsub;
 }
+
+export function writeBatch(_db) {
+  const ops = [];
+  return {
+    set(docRef, data, opts = {}) {
+      ops.push({ type: 'set', docRef, data, opts });
+    },
+    update(docRef, data) {
+      ops.push({ type: 'update', docRef, data });
+    },
+    delete(docRef) {
+      ops.push({ type: 'delete', docRef });
+    },
+    async commit() {
+      for (const op of ops) {
+        if (op.type === 'set')    await setDoc(op.docRef, op.data, op.opts);
+        if (op.type === 'update') await updateDoc(op.docRef, op.data);
+        if (op.type === 'delete') await deleteDoc(op.docRef);
+      }
+    },
+  };
+}
