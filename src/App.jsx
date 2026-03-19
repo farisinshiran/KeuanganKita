@@ -426,7 +426,7 @@ export default function App() {
       )}
 
       {/* ── Main content ── */}
-      <main ref={mainRef} className="flex-1 md:ml-64 p-4 md:pt-20 md:px-6 pb-12 w-full flex flex-col min-h-screen">
+      <main ref={mainRef} className={`md:ml-64 p-4 md:pt-20 md:px-6 pb-12 flex flex-col min-h-screen transition-[margin,padding] duration-300 min-w-0${isAIOpen ? ' md:mr-96' : ''}`}>
 
         {/* Demo Mode banner */}
         {IS_DEMO_MODE && (

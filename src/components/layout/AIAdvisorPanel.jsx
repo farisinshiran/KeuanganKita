@@ -246,23 +246,21 @@ export default function AIAdvisorPanel({ isOpen, onToggle, summary, transactions
 
       {/* ── Panel ────────────────────────────────────────────────── */}
       {/*
-        Mobile  (< md): fixed overlay sliding in from the right
-        Desktop (≥ md): sticky in-flow sidebar that pushes main content
+        Fixed overlay sliding in from the right on all screen sizes.
+        Main content adjusts its right margin via App.jsx when isOpen.
       */}
       <div
         className={[
-          // Mobile: fixed right-panel overlay
+          // Fixed right-panel overlay on all screens
           'fixed inset-y-0 right-0 z-50 flex flex-col',
-          // Desktop: sticky in-flow sidebar
-          'md:sticky md:top-0 md:bottom-auto md:right-auto md:h-screen md:z-auto',
           // Appearance
           'bg-white dark:bg-gray-800',
-          'shadow-2xl md:shadow-none',
+          'shadow-2xl border-l border-gray-200 dark:border-gray-700',
           'transition-all duration-300 ease-in-out',
           // Open / closed state
           isOpen
-            ? 'w-full sm:w-96 translate-x-0 md:w-96 border-l border-gray-200 dark:border-gray-700'
-            : 'w-full sm:w-96 translate-x-full md:translate-x-0 md:w-0 md:overflow-hidden md:border-l-0',
+            ? 'w-full sm:w-96 translate-x-0'
+            : 'w-full sm:w-96 translate-x-full',
         ].join(' ')}
       >
         {/* ── Header ──────────────────────────────────────────────── */}
