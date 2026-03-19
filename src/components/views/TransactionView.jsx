@@ -1,7 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import {
-  Plus, Save, X, Edit2, Trash2, ArrowRightLeft, Briefcase, Bot, ScanLine, ListFilter, Download
-} from 'lucide-react';
+import Icon from '../ui/Icon.jsx';
 import { collection, addDoc, doc, increment, serverTimestamp, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { formatDate, formatDateInput } from '../../utils/formatters';
@@ -48,6 +46,7 @@ const TransactionView = ({ transactions, categories, wallets, investments = [], 
   const [formData, setFormData] = useState(createInitialFormData);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [filters, setFilters] = useState({ startDate: '', endDate: '', walletId: '' });
+  const [typeFilter, setTypeFilter] = useState('');
 
   const investmentMap = useMemo(
     () => new Map((investments || []).map(inv => [inv.id, inv])),
@@ -72,9 +71,10 @@ const TransactionView = ({ transactions, categories, wallets, investments = [], 
         matchesWallet = t.walletId === filters.walletId || t.sourceWalletId === filters.walletId || t.targetWalletId === filters.walletId;
       }
 
-      return matchesDate && matchesWallet;
+      const matchesType = !typeFilter || t.type === typeFilter;
+      return matchesDate && matchesWallet && matchesType;
     });
-  }, [transactions, filters]);
+  }, [transactions, filters, typeFilter]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -157,34 +157,41 @@ const TransactionView = ({ transactions, categories, wallets, investments = [], 
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Transaksi</h2>
+        <h2 className="text-2xl font-bold text-on-surface">Transaksi</h2>
         <div className="flex gap-2">
-          <button onClick={() => exportToCSV(filteredTransactions, wallets)} className="border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-3 py-2 rounded-lg flex gap-1.5 items-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"><Download size={16}/> Export CSV</button>
-          <button onClick={() => { setIsFormOpen(!isFormOpen); setFormData(createInitialFormData()); }} className="bg-emerald-600 text-white px-4 py-2 rounded-lg flex gap-2 hover:bg-emerald-700 transition-colors">{isFormOpen ? <X size={18}/> : <Plus size={18}/>} <span>{isFormOpen ? 'Batal' : 'Baru'}</span></button>
+          <button onClick={() => exportToCSV(filteredTransactions, wallets)} className="bg-surface-container-low text-on-surface-variant px-3 py-2 rounded-xl flex gap-1.5 items-center hover:bg-surface-container transition-colors text-sm"><Icon name="download" size={16}/> Export CSV</button>
+          <button onClick={() => { setIsFormOpen(!isFormOpen); setFormData(createInitialFormData()); }} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${isFormOpen ? 'border-2 border-primary text-primary hover:bg-primary/5' : 'bg-primary text-on-primary shadow-lg shadow-primary/20 hover:scale-[0.98] active:scale-95'}`}><Icon name={isFormOpen ? 'close' : 'add'} size={18}/> <span>{isFormOpen ? 'Batal' : 'Baru'}</span></button>
         </div>
       </div>
 
-      {/* FILTER BAR */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col md:flex-row gap-3 items-end">
-        <div className="w-full md:w-auto flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm font-semibold">
-           <ListFilter size={16}/> Filter:
+      {/* TYPE FILTER CHIPS + FILTER BAR */}
+      <div className="space-y-3">
+        <div className="flex gap-2 flex-wrap">
+          {[{ label: 'Semua', value: '' }, { label: 'Pemasukan', value: 'income' }, { label: 'Pengeluaran', value: 'expense' }, { label: 'Investasi', value: 'investment' }, { label: 'Jual Aset', value: 'investment_sale' }, { label: 'Transfer', value: 'transfer' }].map(({ label, value }) => (
+            <button key={value} onClick={() => setTypeFilter(value)} className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${typeFilter === value ? 'bg-primary text-on-primary shadow-sm' : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'}`}>{label}</button>
+          ))}
         </div>
-        <div className="w-full md:w-auto space-y-1">
-           <label className="text-xs text-gray-500 dark:text-gray-400">Dari Tanggal</label>
-           <input type="date" value={filters.startDate} onChange={e=>setFilters({...filters, startDate:e.target.value})} className="w-full p-2 border rounded-lg text-sm bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white"/>
+        <div className="bg-surface-container-low p-4 rounded-2xl flex flex-col md:flex-row gap-3 items-end">
+          <div className="w-full md:w-auto flex items-center gap-2 text-on-surface-variant text-sm font-semibold">
+            <Icon name="filter_list" size={16}/> Filter:
+          </div>
+          <div className="w-full md:w-auto space-y-1">
+            <label className="text-xs text-on-surface-variant">Dari Tanggal</label>
+            <input type="date" value={filters.startDate} onChange={e=>setFilters({...filters, startDate:e.target.value})} className="w-full p-2 bg-surface-container-lowest border-none rounded-xl text-sm outline-none focus:ring-1 focus:ring-primary/20 text-on-surface"/>
+          </div>
+          <div className="w-full md:w-auto space-y-1">
+            <label className="text-xs text-on-surface-variant">Sampai Tanggal</label>
+            <input type="date" value={filters.endDate} onChange={e=>setFilters({...filters, endDate:e.target.value})} className="w-full p-2 bg-surface-container-lowest border-none rounded-xl text-sm outline-none focus:ring-1 focus:ring-primary/20 text-on-surface"/>
+          </div>
+          <div className="w-full md:w-auto space-y-1 flex-1">
+            <label className="text-xs text-on-surface-variant">Rekening / Dompet</label>
+            <select value={filters.walletId} onChange={e=>setFilters({...filters, walletId:e.target.value})} className="w-full p-2 bg-surface-container-lowest border-none rounded-xl text-sm outline-none text-on-surface">
+              <option value="">Semua Rekening</option>
+              {wallets.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}
+            </select>
+          </div>
+          <button onClick={()=>{ setFilters({startDate:'', endDate:'', walletId:''}); setTypeFilter(''); }} className="text-sm text-error hover:text-error/80 underline pb-2">Reset</button>
         </div>
-        <div className="w-full md:w-auto space-y-1">
-           <label className="text-xs text-gray-500 dark:text-gray-400">Sampai Tanggal</label>
-           <input type="date" value={filters.endDate} onChange={e=>setFilters({...filters, endDate:e.target.value})} className="w-full p-2 border rounded-lg text-sm bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white"/>
-        </div>
-        <div className="w-full md:w-auto space-y-1 flex-1">
-           <label className="text-xs text-gray-500 dark:text-gray-400">Rekening / Dompet</label>
-           <select value={filters.walletId} onChange={e=>setFilters({...filters, walletId:e.target.value})} className="w-full p-2 border rounded-lg text-sm bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-             <option value="">Semua Rekening</option>
-             {wallets.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}
-           </select>
-        </div>
-        <button onClick={()=>setFilters({startDate:'', endDate:'', walletId:''})} className="text-sm text-red-500 hover:text-red-700 underline pb-2">Reset</button>
       </div>
 
       {isFormOpen && (

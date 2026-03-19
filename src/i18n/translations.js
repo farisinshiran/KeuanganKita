@@ -35,6 +35,10 @@ export const translations = {
       savingsGoals: 'Target Tabungan',
       aiAdvisor: 'AI Advisor',
       categories: 'Kategori',
+      // 2.0 renamed tab IDs
+      budget: 'Anggaran',
+      incomeSources: 'Sumber Pendapatan',
+      salarySlips: 'Slip Gaji',
       group: {
         daily: 'Harian',
         planning: 'Perencanaan',
@@ -116,6 +120,10 @@ export const translations = {
       savingsGoals: 'Savings Goals',
       aiAdvisor: 'AI Advisor',
       categories: 'Categories',
+      // 2.0 renamed tab IDs
+      budget: 'Budget',
+      incomeSources: 'Income Sources',
+      salarySlips: 'Salary Slips',
       group: {
         daily: 'Daily',
         planning: 'Planning',

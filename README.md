@@ -36,7 +36,7 @@
 - Automatic categorisation with full edit history
 
 ### 👛 Wallets
-- **Bank**, **Cash**, **Credit Card** (with limit tracking), **E-Wallet**, **PayLater** (GoPay Later, Kredivo, etc.)
+- **Bank**, **Cash**, **Credit Card** (with limit tracking), **E-Wallet**, **PayLater** (GoPay Later, Kredivo, etc.), **RDN** (Rekening Dana Nasabah for stock accounts)
 - Custom name, icon, and emoji support
 - Running balance computed from transaction history
 
@@ -77,12 +77,15 @@
 | **Bahasa / English** | Full i18n toggle |
 | **Dark mode** | Full dark theme across all views |
 | **Privacy mode** | Replace all numbers with bullets ( • ) |
+| **Material Design 3** | Full MD3 color token system — surface containers, roles, dynamic color |
 | **Education Fund** | Dedicated savings planner for education costs |
 | **Income Diversification** | Track multiple income streams |
 | **Salary Slip Archive** | Store and parse payslip PDFs |
 | **Google Sign-In** | Firebase Auth — one-click, no passwords |
 | **Real-time sync** | `onSnapshot` Firestore listeners |
 | **Mobile-first** | Responsive layout with pull-to-refresh |
+
+> **v2.1 Design System** — Every view is built on a Material Design 3 token foundation. Colors reference semantic roles (`primary`, `on-surface`, `surface-container-*`, `secondary-container`, `error-container`, `tertiary-fixed`, etc.) defined once in `tailwind.config.js`, illustrated by the Manrope typeface and Material Symbols Outlined icon set.
 
 ---
 
@@ -95,7 +98,9 @@
 | Database | Firebase Firestore (real-time) |
 | Auth | Firebase Authentication (Google OAuth 2.0) |
 | Charts | Recharts |
-| Icons | Lucide React |
+| Icons | Material Symbols Outlined (variable font) |
+| Design System | Material Design 3 color tokens via Tailwind CSS |
+| Typography | Manrope (Google Fonts) |
 | AI | Google Gemini API, OpenRouter API |
 | OCR | Google Cloud Vision API |
 | i18n | Custom `useI18n` hook + `translations.js` |

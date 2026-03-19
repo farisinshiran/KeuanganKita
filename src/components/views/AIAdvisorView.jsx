@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bot, Send, Settings, X, Sparkles, RefreshCw, Key, ChevronDown } from 'lucide-react';
+import Icon from '../ui/Icon.jsx';
 import { calculateHealthScore } from '../../utils/healthScore';
 
 // ── LocalStorage keys ──────────────────────────────────────────────────────
@@ -229,149 +229,144 @@ const AIAdvisorView = ({ summary, transactions, categories, investments, savings
   const clearChat = () => { setMessages([]); setError(''); };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)] md:h-[calc(100vh-6rem)] space-y-0">
+    <div className="flex flex-col h-[calc(100vh-8rem)] md:h-[calc(100vh-6rem)]">
+
+      {/* ── Settings Modal Overlay ── */}
+      {showSettings && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in" onClick={() => { setShowSettings(false); setError(''); }}>
+          <div className="bg-surface-container-lowest rounded-3xl shadow-2xl w-full max-w-md animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-6 border-b border-outline-variant/20">
+              <h3 className="font-bold text-on-surface flex items-center gap-2">
+                <Icon name="settings" size={20} className="text-primary" /> Konfigurasi AI
+              </h3>
+              <button onClick={() => { setShowSettings(false); setError(''); }} className="p-2 rounded-xl hover:bg-surface-container text-on-surface-variant transition-colors">
+                <Icon name="close" size={20} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              {/* Provider toggle */}
+              <div className="flex gap-2 bg-surface-container-low p-1.5 rounded-xl">
+                <button
+                  onClick={() => setProvider('gemini')}
+                  className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${provider === 'gemini' ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
+                >
+                  Google Gemini
+                </button>
+                <button
+                  onClick={() => setProvider('openrouter')}
+                  className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${provider === 'openrouter' ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
+                >
+                  OpenRouter
+                </button>
+              </div>
+
+              {provider === 'gemini' ? (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-on-surface-variant">
+                    Google Gemini API Key
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="ml-1 text-primary hover:underline">→ Dapatkan</a>
+                  </label>
+                  <input
+                    type="password"
+                    value={geminiKey}
+                    onChange={e => setGeminiKey(e.target.value.trim())}
+                    className="w-full p-3 bg-surface-container-low border-none rounded-xl focus:ring-1 focus:ring-primary/20 outline-none text-on-surface text-sm"
+                    placeholder="AIzaSy..."
+                  />
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-on-surface-variant">
+                      OpenRouter API Key
+                      <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="ml-1 text-primary hover:underline">→ Dapatkan</a>
+                    </label>
+                    <input
+                      type="password"
+                      value={orKey}
+                      onChange={e => setOrKey(e.target.value.trim())}
+                      className="w-full p-3 bg-surface-container-low border-none rounded-xl focus:ring-1 focus:ring-primary/20 outline-none text-on-surface text-sm"
+                      placeholder="sk-or-..."
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-on-surface-variant">Model</label>
+                    <select
+                      value={orModel}
+                      onChange={e => setOrModel(e.target.value)}
+                      className="w-full p-3 bg-surface-container-low border-none rounded-xl focus:ring-1 focus:ring-primary/20 outline-none text-on-surface text-sm appearance-none"
+                    >
+                      {OR_MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                    </select>
+                  </div>
+                </div>
+              )}
+              <p className="text-xs text-on-surface-variant bg-surface-container-low p-3 rounded-xl">
+                🔒 API key hanya disimpan di perangkat ini (localStorage), tidak dikirim ke server kami.
+              </p>
+              {error && <p className="text-xs text-error bg-error-container p-3 rounded-xl">{error}</p>}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Header ── */}
-      <div className="bg-white dark:bg-gray-800 rounded-t-xl border border-gray-100 dark:border-gray-700 p-4 flex justify-between items-center shrink-0">
+      <div className="bg-surface-container-lowest rounded-t-2xl p-4 flex justify-between items-center shrink-0 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg">
-            <Bot size={20} className="text-emerald-600 dark:text-emerald-400"/>
+          <div className="p-2.5 bg-primary/10 rounded-2xl">
+            <Icon name="psychology" size={22} className="text-primary" fill={1} />
           </div>
           <div>
-            <h2 className="font-bold text-gray-800 dark:text-gray-100">AI Financial Advisor</h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Powered by {provider === 'gemini' ? 'Google Gemini 2.0 Flash' : `OpenRouter · ${OR_MODELS.find(m => m.value === orModel)?.label || orModel}`}
-              {activeKey && <span className="ml-1 text-emerald-500">✓</span>}
+            <h2 className="font-bold text-on-surface">AI Financial Advisor</h2>
+            <p className="text-xs text-on-surface-variant">
+              {provider === 'gemini' ? 'Google Gemini 2.0 Flash' : `OpenRouter · ${OR_MODELS.find(m => m.value === orModel)?.label || orModel}`}
+              {activeKey && <span className="ml-1 text-secondary">✓</span>}
             </p>
           </div>
         </div>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-1 items-center">
           {messages.length > 0 && (
-            <button
-              onClick={clearChat}
-              className="p-2 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              title="Hapus percakapan"
-            >
-              <RefreshCw size={16}/>
+            <button onClick={clearChat} className="p-2 rounded-xl text-on-surface-variant hover:bg-surface-container transition-colors" title="Hapus percakapan">
+              <Icon name="refresh" size={18} />
             </button>
           )}
           <button
             onClick={() => setShowSettings(v => !v)}
-            className={`p-2 rounded-lg transition-colors ${showSettings ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+            className="p-2 rounded-xl text-on-surface-variant hover:bg-surface-container transition-colors"
           >
-            <Settings size={18}/>
+            <Icon name="settings" size={18} />
           </button>
         </div>
       </div>
 
-      {/* ── Settings Panel ── */}
-      {showSettings && (
-        <div className="bg-amber-50 dark:bg-gray-800/80 border-x border-amber-100 dark:border-gray-700 p-4 shrink-0 space-y-3 animate-in fade-in slide-in-from-top-2">
-          <div className="flex justify-between items-center">
-            <p className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5"><Key size={14}/> Konfigurasi AI</p>
-            <button onClick={() => { setShowSettings(false); setError(''); }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-              <X size={16}/>
-            </button>
-          </div>
-
-          {/* Provider toggle */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => setProvider('gemini')}
-              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all border ${provider === 'gemini' ? 'bg-white dark:bg-gray-700 border-emerald-500 text-emerald-700 dark:text-emerald-400 ring-2 ring-emerald-300/50' : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700'}`}
-            >
-              Google Gemini
-            </button>
-            <button
-              onClick={() => setProvider('openrouter')}
-              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all border ${provider === 'openrouter' ? 'bg-white dark:bg-gray-700 border-emerald-500 text-emerald-700 dark:text-emerald-400 ring-2 ring-emerald-300/50' : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700'}`}
-            >
-              OpenRouter
-            </button>
-          </div>
-
-          {provider === 'gemini' ? (
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-500 dark:text-gray-400">
-                Google Gemini API Key
-                <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="ml-1 text-blue-500 hover:underline">→ Dapatkan</a>
-              </label>
-              <input
-                type="password"
-                value={geminiKey}
-                onChange={e => setGeminiKey(e.target.value.trim())}
-                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
-                placeholder="AIzaSy..."
-              />
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400">
-                  OpenRouter API Key
-                  <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="ml-1 text-blue-500 hover:underline">→ Dapatkan</a>
-                </label>
-                <input
-                  type="password"
-                  value={orKey}
-                  onChange={e => setOrKey(e.target.value.trim())}
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
-                  placeholder="sk-or-..."
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400">Model</label>
-                <div className="relative">
-                  <select
-                    value={orModel}
-                    onChange={e => setOrModel(e.target.value)}
-                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none appearance-none pr-8"
-                  >
-                    {OR_MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                  </select>
-                  <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"/>
-                </div>
-              </div>
-            </div>
-          )}
-          <p className="text-xs text-gray-400 dark:text-gray-500">
-            🔒 API key hanya disimpan di perangkat ini (localStorage), tidak dikirim ke server kami.
-          </p>
-          {error && <p className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded-lg">{error}</p>}
-        </div>
-      )}
-
       {/* ── Chat Area ── */}
-      <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900/50 border-x border-gray-100 dark:border-gray-700 p-4 space-y-4 min-h-0">
+      <div className="flex-1 overflow-y-auto bg-surface-container/30 p-4 space-y-4 min-h-0">
 
         {/* Welcome / empty state */}
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-6 text-center py-8">
-            <div className="p-4 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl">
-              <Sparkles size={32} className="text-emerald-500"/>
+            <div className="p-5 bg-primary/10 rounded-3xl">
+              <Icon name="auto_awesome" size={36} className="text-primary" fill={1} />
             </div>
             <div>
-              <p className="font-semibold text-gray-700 dark:text-gray-300 text-lg">Halo! Ada yang bisa aku bantu?</p>
-              <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-                Aku tahu kondisi keuanganmu — tanya apa saja!
-              </p>
+              <p className="font-bold text-on-surface text-lg">Halo! Ada yang bisa aku bantu?</p>
+              <p className="text-sm text-on-surface-variant mt-1">Aku tahu kondisi keuanganmu — tanya apa saja!</p>
             </div>
             {!activeKey && (
               <button
                 onClick={() => setShowSettings(true)}
-                className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors text-sm"
+                className="flex items-center gap-2 bg-primary text-on-primary px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-primary/20 hover:scale-[0.98] active:scale-95 transition-all text-sm"
               >
-                <Key size={16}/> Atur API Key dulu
+                <Icon name="key" size={16} /> Atur API Key dulu
               </button>
             )}
-            {/* Quick prompts */}
             <div className="flex flex-col gap-2 w-full max-w-sm">
               {QUICK_PROMPTS.map((p, i) => (
                 <button
                   key={i}
                   onClick={() => sendMessage(p)}
                   disabled={isLoading}
-                  className="text-left text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 hover:border-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors text-gray-600 dark:text-gray-300 disabled:opacity-50"
+                  className="text-left text-sm bg-surface-container-lowest border border-outline-variant/20 rounded-2xl p-4 hover:border-primary/30 hover:bg-primary/5 transition-colors text-on-surface disabled:opacity-50"
                 >
                   {p}
                 </button>
@@ -383,13 +378,11 @@ const AIAdvisorView = ({ summary, transactions, categories, investments, savings
         {/* Messages */}
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div
-              className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
-                msg.role === 'user'
-                  ? 'bg-emerald-600 text-white rounded-br-md'
-                  : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-100 dark:border-gray-700 rounded-bl-md shadow-sm'
-              }`}
-            >
+            <div className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+              msg.role === 'user'
+                ? 'bg-primary text-on-primary rounded-br-sm'
+                : 'bg-surface-container-lowest text-on-surface border border-outline-variant/20 rounded-bl-sm shadow-sm'
+            }`}>
               {msg.content}
             </div>
           </div>
@@ -398,31 +391,27 @@ const AIAdvisorView = ({ summary, transactions, categories, investments, savings
         {/* Loading dots */}
         {isLoading && (
           <div className="flex justify-start">
-            <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
+            <div className="bg-surface-container-lowest border border-outline-variant/20 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
               <div className="flex gap-1.5 items-center h-4">
                 {[0, 1, 2].map(i => (
-                  <div
-                    key={i}
-                    className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce"
-                    style={{ animationDelay: `${i * 0.15}s` }}
-                  />
+                  <div key={i} className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
                 ))}
               </div>
             </div>
           </div>
         )}
-        <div ref={bottomRef}/>
+        <div ref={bottomRef} />
       </div>
 
       {/* ── Quick prompts (when already chatting) ── */}
       {messages.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 border-x border-t border-gray-100 dark:border-gray-700 px-3 py-2 flex gap-2 overflow-x-auto shrink-0">
+        <div className="bg-surface-container-lowest border-t border-outline-variant/10 px-3 py-2 flex gap-2 overflow-x-auto shrink-0">
           {QUICK_PROMPTS.map((p, i) => (
             <button
               key={i}
               onClick={() => sendMessage(p)}
               disabled={isLoading}
-              className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-emerald-100 dark:hover:bg-emerald-900/30 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors disabled:opacity-50 shrink-0"
+              className="text-xs bg-surface-container text-on-surface-variant px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-primary/10 hover:text-primary transition-colors disabled:opacity-50 shrink-0"
             >
               {p}
             </button>
@@ -431,7 +420,7 @@ const AIAdvisorView = ({ summary, transactions, categories, investments, savings
       )}
 
       {/* ── Input bar ── */}
-      <div className="bg-white dark:bg-gray-800 rounded-b-xl border border-t-0 border-gray-100 dark:border-gray-700 p-3 shrink-0">
+      <div className="bg-surface-container-lowest rounded-b-2xl p-3 shrink-0">
         <div className="flex gap-2 items-end">
           <textarea
             ref={inputRef}
@@ -441,14 +430,14 @@ const AIAdvisorView = ({ summary, transactions, categories, investments, savings
             disabled={isLoading}
             rows={1}
             placeholder="Ketik pertanyaanmu… (Enter untuk kirim)"
-            className="flex-1 resize-none p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-emerald-500 outline-none text-sm bg-gray-50 dark:bg-gray-700 dark:text-white transition-all max-h-32 overflow-y-auto disabled:opacity-50"
+            className="flex-1 resize-none p-3 bg-surface-container-low border-none rounded-xl focus:ring-1 focus:ring-primary/20 outline-none text-sm text-on-surface transition-all max-h-32 overflow-y-auto disabled:opacity-50"
           />
           <button
             onClick={() => sendMessage()}
             disabled={isLoading || !input.trim()}
-            className="p-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shrink-0 active:scale-95"
+            className="p-3 bg-primary text-on-primary rounded-xl disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-primary/20 hover:scale-[0.98] active:scale-95 transition-all shrink-0"
           >
-            <Send size={18}/>
+            <Icon name="send" size={18} />
           </button>
         </div>
       </div>

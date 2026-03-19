@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Plus, Trash2, RefreshCw, Target, DollarSign, AlertTriangle, CheckCircle, CalendarDays, ArrowLeftRight, BarChart3, Receipt, Wand2 } from 'lucide-react';
+import Icon from '../ui/Icon';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import BudgetWizard from '../modals/BudgetWizard';
 import { db } from '../../config/firebase';
@@ -484,29 +484,30 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
 
   return (
     <div className="space-y-6">
+      {/* ── Header ── */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-          <DollarSign size={28} className="text-emerald-600 dark:text-emerald-400"/>
+        <h2 className="text-2xl font-extrabold text-on-surface flex items-center gap-2">
+          <Icon name="account_balance_wallet" size={28} className="text-primary" />
           {t('salaryAllocator.title')}
         </h2>
         <div className="flex gap-2 flex-wrap items-center">
-          <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm">
-            <CalendarDays size={16} className="text-gray-500 dark:text-gray-400"/>
+          <div className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-surface-container text-sm">
+            <Icon name="calendar_month" size={16} className="text-on-surface-variant" />
             <input
               type="month"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="bg-transparent outline-none text-gray-700 dark:text-gray-200"
+              className="bg-transparent outline-none text-on-surface font-medium"
             />
           </div>
-          <button onClick={handleCarryOverFromPreviousMonth} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex gap-2 items-center transition-colors">
-            <ArrowLeftRight size={16}/> {t('salaryAllocator.carryOver')}
+          <button onClick={handleCarryOverFromPreviousMonth} className="bg-surface-container-high text-on-surface px-3 py-2 rounded-xl text-sm font-medium flex gap-1.5 items-center hover:bg-surface-container-highest transition-colors">
+            <Icon name="swap_horiz" size={16} /> {t('salaryAllocator.carryOver')}
           </button>
-          <button onClick={handleResetCurrentMonth} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex gap-2 items-center transition-colors">
-            <RefreshCw size={16}/> {t('salaryAllocator.reset')}
+          <button onClick={handleResetCurrentMonth} className="bg-error-container text-on-error-container px-3 py-2 rounded-xl text-sm font-medium flex gap-1.5 items-center hover:bg-error-container/80 transition-colors">
+            <Icon name="refresh" size={16} /> {t('salaryAllocator.reset')}
           </button>
-          <button onClick={() => setIsWizardOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex gap-2 items-center transition-colors">
-            <Wand2 size={16}/> Budget Wizard
+          <button onClick={() => setIsWizardOpen(true)} className="bg-primary text-on-primary px-4 py-2 rounded-xl text-sm font-semibold flex gap-1.5 items-center shadow-lg shadow-primary/20 hover:scale-[0.98] active:scale-95 transition-all">
+            <Icon name="auto_fix_high" size={16} /> Budget Wizard
           </button>
         </div>
       </div>
@@ -521,188 +522,172 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
         selectedMonth={selectedMonth}
       />
 
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center justify-between">
+      {/* ── Period + save status ── */}
+      <div className="bg-surface-container-low rounded-2xl p-4 flex items-center justify-between">
         <div>
-          <p className="text-xs text-gray-500 dark:text-gray-400">{t('common.activePeriod')}</p>
-          <p className="font-bold text-gray-800 dark:text-gray-100">{monthLabel(selectedMonth, lang)}</p>
+          <p className="text-xs text-on-surface-variant">{t('common.activePeriod')}</p>
+          <p className="font-bold text-on-surface">{monthLabel(selectedMonth, lang)}</p>
         </div>
         <div className="text-right">
-          <p className="text-xs text-gray-500 dark:text-gray-400">{t('common.saveStatus')}</p>
-          <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+          <p className="text-xs text-on-surface-variant">{t('common.saveStatus')}</p>
+          <p className="text-xs font-semibold text-primary">
             {isMonthLoading ? t('salaryAllocator.loadingMonth') : isSaving ? t('salaryAllocator.saving') : t('salaryAllocator.saved')}
           </p>
-          {lastSavedAt && <p className="text-[11px] text-gray-400 dark:text-gray-500">{lastSavedAt.toLocaleTimeString('id-ID')}</p>}
+          {lastSavedAt && <p className="text-[11px] text-on-surface-variant">{lastSavedAt.toLocaleTimeString('id-ID')}</p>}
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="font-semibold text-gray-700 dark:text-gray-200">Input Pendapatan Bulan {monthLabel(selectedMonth, lang)}</h3>
+      {/* ── Income Input ── */}
+      <div className="bg-surface-container-low rounded-2xl p-6">
+        <div className="flex justify-between items-center mb-5">
+          <h3 className="font-bold text-on-surface">Input Pendapatan — {monthLabel(selectedMonth, lang)}</h3>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-              <CheckCircle size={14}/> {t('common.autoSave')}
+            <span className="text-xs text-primary flex items-center gap-1">
+              <Icon name="check_circle" size={14} /> {t('common.autoSave')}
             </span>
-            <button onClick={handleAddSalarySource} className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex gap-1 items-center transition-colors">
-              <Plus size={14}/> Tambah Sumber
+            <button onClick={handleAddSalarySource} className="bg-primary text-on-primary px-3 py-1.5 rounded-xl text-xs font-semibold flex gap-1 items-center shadow-sm hover:scale-[0.98] active:scale-95 transition-all">
+              <Icon name="add" size={14} /> Tambah Sumber
             </button>
           </div>
         </div>
 
-        <div className="space-y-3 mb-4">
+        <div className="space-y-3 mb-5">
           {salaries.map((sal, index) => (
-            <div key={sal.id} className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+            <div key={sal.id} className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 bg-surface-container rounded-xl">
               <div className="space-y-1">
-                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400">Sumber Pendapatan #{index + 1}</label>
-                <input type="text" value={sal.source} onChange={(e) => handleUpdateSalarySource(sal.id, 'source', e.target.value)} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white dark:bg-gray-800 dark:text-white text-sm" placeholder="Contoh: Gaji Utama, Bonus"/>
+                <label className="block text-xs font-semibold text-on-surface-variant">Sumber #{index + 1}</label>
+                <input type="text" value={sal.source} onChange={(e) => handleUpdateSalarySource(sal.id, 'source', e.target.value)} className="w-full p-2.5 bg-surface-container-lowest border-none rounded-xl focus:ring-1 focus:ring-primary/20 outline-none text-on-surface text-sm" placeholder="Contoh: Gaji Utama, Bonus" />
               </div>
               <div className="space-y-1">
-                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400">Nominal (Rp)</label>
-                <input type="number" value={sal.amount} onChange={(e) => handleUpdateSalarySource(sal.id, 'amount', e.target.value)} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white dark:bg-gray-800 dark:text-white text-sm font-semibold" placeholder="0" min="0"/>
+                <label className="block text-xs font-semibold text-on-surface-variant">Nominal (Rp)</label>
+                <input type="number" value={sal.amount} onChange={(e) => handleUpdateSalarySource(sal.id, 'amount', e.target.value)} className="w-full p-2.5 bg-surface-container-lowest border-none rounded-xl focus:ring-1 focus:ring-primary/20 outline-none text-on-surface text-sm font-semibold" placeholder="0" min="0" />
               </div>
               <div className="flex items-end">
-                <button onClick={() => handleDeleteSalarySource(sal.id)} disabled={salaries.length === 1} className="w-full p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-sm font-medium">
-                  <Trash2 size={16} className="inline mr-1"/> Hapus
+                <button onClick={() => handleDeleteSalarySource(sal.id)} disabled={salaries.length === 1} className="w-full p-2.5 text-on-error-container bg-error-container/30 hover:bg-error-container rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs font-semibold flex items-center justify-center gap-1">
+                  <Icon name="delete" size={15} /> Hapus
                 </button>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t dark:border-gray-700">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-outline-variant/30">
           <div className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Rekening Default</label>
-            <select value={selectedWallet} onChange={(e) => setSelectedWallet(e.target.value)} className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white dark:bg-gray-700 dark:text-white">
+            <label className="block text-sm font-semibold text-on-surface-variant">Rekening Default</label>
+            <select value={selectedWallet} onChange={(e) => setSelectedWallet(e.target.value)} className="w-full p-3 bg-surface-container-lowest border-none rounded-xl focus:ring-1 focus:ring-primary/20 outline-none text-on-surface">
               <option value="">Pilih Rekening...</option>
               {wallets.map(w => <option key={w.id} value={w.id}>{w.icon} {w.name}</option>)}
             </select>
           </div>
           <div className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">{t('salaryAllocator.expenseBudgetLabel')}</label>
-            <input
-              type="number"
-              value={expenseBudget}
-              onChange={(e) => setExpenseBudget(e.target.value)}
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white dark:bg-gray-700 dark:text-white font-semibold"
-              placeholder="0"
-              min="0"
-            />
+            <label className="block text-sm font-semibold text-on-surface-variant">{t('salaryAllocator.expenseBudgetLabel')}</label>
+            <input type="number" value={expenseBudget} onChange={(e) => setExpenseBudget(e.target.value)} className="w-full p-3 bg-surface-container-lowest border-none rounded-xl focus:ring-1 focus:ring-primary/20 outline-none text-on-surface font-semibold" placeholder="0" min="0" />
           </div>
           <div className="flex items-end">
-            <div className="w-full p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-              <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold mb-1">{t('salaryAllocator.expenseAllocation')}</p>
-              <p className="text-xl font-bold text-blue-700 dark:text-blue-300">{fmt(expenseBudgetValue)}</p>
-              <p className={`text-xs mt-1 ${varianceAgainstExpenseBudget >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+            <div className="w-full p-4 bg-surface-container rounded-xl">
+              <p className="text-xs text-on-surface-variant font-semibold mb-1">{t('salaryAllocator.expenseAllocation')}</p>
+              <p className="text-xl font-bold text-on-surface">{fmt(expenseBudgetValue)}</p>
+              <p className={`text-xs mt-1 ${varianceAgainstExpenseBudget >= 0 ? 'text-primary' : 'text-on-error-container'}`}>
                 {varianceAgainstExpenseBudget >= 0
-                  ? `Sisa alokasi pengeluaran ${fmt(varianceAgainstExpenseBudget)}`
-                  : `Pengeluaran melebihi alokasi ${fmt(Math.abs(varianceAgainstExpenseBudget))}`}
+                  ? `Sisa ${fmt(varianceAgainstExpenseBudget)}`
+                  : `Melebihi ${fmt(Math.abs(varianceAgainstExpenseBudget))}`}
               </p>
             </div>
           </div>
           <div className="flex items-end">
-            <div className="w-full p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
-              <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mb-1">INPUT MANUAL</p>
-              <p className="text-xl font-bold text-emerald-700 dark:text-emerald-300">{fmt(salaryTotal)}</p>
-              <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">+ Realisasi transaksi pemasukan: {fmt(incomeFromTransactions)}</p>
+            <div className="w-full p-4 bg-surface-container rounded-xl">
+              <p className="text-xs text-on-surface-variant font-semibold mb-1">INPUT MANUAL</p>
+              <p className="text-xl font-bold text-on-surface">{fmt(salaryTotal)}</p>
+              <p className="text-xs text-on-surface-variant mt-1">+ Realisasi transaksi: {fmt(incomeFromTransactions)}</p>
             </div>
           </div>
         </div>
       </div>
 
+      {/* ── Hero stat strip ── */}
       {(totalIncome > 0 || hasAnyAllocation || totalSpent > 0 || expenseBudgetValue > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">TOTAL PENDAPATAN</p>
-            <h3 className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{fmt(totalIncome)}</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">manual + transaksi pemasukan</p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">{t('salaryAllocator.expenseAllocation')}</p>
-            <h3 className="text-2xl font-bold text-purple-600 dark:text-purple-400">{fmt(expenseBudgetValue)}</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{totalIncome > 0 ? ((expenseBudgetValue / totalIncome) * 100).toFixed(1) : 0}% dari pendapatan</p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">{t('salaryAllocator.expenseUsed')}</p>
-            <h3 className="text-2xl font-bold text-amber-600 dark:text-amber-400">{fmt(totalExpenseSpent)}</h3>
-            <p className={`text-xs mt-1 ${varianceAgainstExpenseBudget >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-              {varianceAgainstExpenseBudget >= 0 ? `Sisa alokasi ${fmt(varianceAgainstExpenseBudget)}` : `Melebihi alokasi ${fmt(Math.abs(varianceAgainstExpenseBudget))}`}
-            </p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">{t('salaryAllocator.investmentUsed')}</p>
-            <h3 className="text-2xl font-bold text-blue-600 dark:text-blue-400">{fmt(totalInvestmentSpent)}</h3>
-            <p className={`text-xs mt-1 ${varianceAgainstInvestmentAllocation >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-              {totalAllocatedInvestment > 0
-                ? (varianceAgainstInvestmentAllocation >= 0
-                  ? `Sisa alokasi investasi ${fmt(varianceAgainstInvestmentAllocation)}`
-                  : `Melebihi alokasi investasi ${fmt(Math.abs(varianceAgainstInvestmentAllocation))}`)
-                : 'Belum ada alokasi investasi'}
-            </p>
-          </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { label: 'TOTAL PENDAPATAN', value: totalIncome, sub: 'manual + transaksi', icon: 'payments', accent: 'bg-secondary-container text-on-secondary-container' },
+            { label: t('salaryAllocator.expenseAllocation'), value: expenseBudgetValue, sub: `${totalIncome > 0 ? ((expenseBudgetValue / totalIncome) * 100).toFixed(1) : 0}% dari pendapatan`, icon: 'category', accent: 'bg-tertiary-fixed/30 text-tertiary' },
+            { label: t('salaryAllocator.expenseUsed'), value: totalExpenseSpent, sub: varianceAgainstExpenseBudget >= 0 ? `Sisa ${fmt(varianceAgainstExpenseBudget)}` : `Melebihi ${fmt(Math.abs(varianceAgainstExpenseBudget))}`, icon: 'receipt_long', accent: 'bg-error-container text-on-error-container' },
+            { label: t('salaryAllocator.investmentUsed'), value: totalInvestmentSpent, sub: totalAllocatedInvestment > 0 ? (varianceAgainstInvestmentAllocation >= 0 ? `Sisa ${fmt(varianceAgainstInvestmentAllocation)}` : `Melebihi ${fmt(Math.abs(varianceAgainstInvestmentAllocation))}`) : 'Belum ada alokasi', icon: 'trending_up', accent: 'bg-primary-fixed/30 text-primary' },
+          ].map(({ label, value, sub, icon, accent }) => (
+            <div key={label} className="bg-surface-container-low rounded-2xl p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <span className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${accent}`}>
+                  <Icon name={icon} size={18} />
+                </span>
+                <p className="text-[10px] text-on-surface-variant font-semibold uppercase tracking-wide leading-tight">{label}</p>
+              </div>
+              <p className="text-xl font-bold text-on-surface">{fmt(value)}</p>
+              <p className="text-xs text-on-surface-variant mt-1">{sub}</p>
+            </div>
+          ))}
         </div>
       )}
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-        <div className="p-4 border-b dark:border-gray-700">
+      {/* ── Expense Allocation Table ── */}
+      <div className="bg-surface-container-low rounded-2xl overflow-hidden">
+        <div className="p-5 border-b border-outline-variant/20">
           <div className="flex justify-between items-center">
-            <h3 className="font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2">
-              <BarChart3 size={18} className="text-blue-500"/> {t('salaryAllocator.expenseBreakdown')}
+            <h3 className="font-bold text-on-surface flex items-center gap-2">
+              <Icon name="bar_chart" size={18} className="text-primary" /> {t('salaryAllocator.expenseBreakdown')}
             </h3>
-            <button onClick={handleAddExpenseAllocation} disabled={!selectedWallet} className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex gap-2 items-center transition-colors">
-              <Plus size={16}/> Tambah Alokasi
+            <button onClick={handleAddExpenseAllocation} disabled={!selectedWallet} className="bg-primary disabled:bg-surface-container-high disabled:text-on-surface-variant text-on-primary px-3 py-1.5 rounded-xl text-sm font-semibold flex gap-1.5 items-center shadow-sm hover:scale-[0.98] active:scale-95 transition-all disabled:shadow-none disabled:hover:scale-100">
+              <Icon name="add" size={16} /> Tambah Alokasi
             </button>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Realisasi kategori dihitung dari transaksi bertipe pengeluaran (termasuk langganan otomatis).</p>
-          <div className="mt-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 text-xs">
-            <p className="font-semibold text-blue-700 dark:text-blue-300">Sisa alokasi untuk dibagi ke kategori: <span className={expenseBudgetRemaining >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}>{fmt(expenseBudgetRemaining)}</span></p>
-            <p className="text-blue-600 dark:text-blue-400 mt-1">Total alokasi pengeluaran: {fmt(totalAllocatedExpense)} dari alokasi pengeluaran {fmt(expenseBudgetValue)}</p>
-            <p className="text-blue-600 dark:text-blue-400 mt-1">Sisa pendapatan setelah seluruh alokasi (pengeluaran + investasi): {fmt(remainingToAllocate)}</p>
+          <p className="text-xs text-on-surface-variant mt-2">Realisasi kategori dihitung dari transaksi bertipe pengeluaran (termasuk langganan otomatis).</p>
+          <div className="mt-3 p-3 rounded-xl bg-surface-container text-xs">
+            <p className="font-semibold text-on-surface">Sisa untuk dibagi ke kategori: <span className={expenseBudgetRemaining >= 0 ? 'text-primary' : 'text-on-error-container'}>{fmt(expenseBudgetRemaining)}</span></p>
+            <p className="text-on-surface-variant mt-1">Total alokasi pengeluaran: {fmt(totalAllocatedExpense)} dari {fmt(expenseBudgetValue)} | Sisa pendapatan total: {fmt(remainingToAllocate)}</p>
           </div>
         </div>
-
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
+            <thead className="bg-surface-container border-b border-outline-variant/20">
               <tr>
-                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">Kategori</th>
-                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">Rekening</th>
-                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">Alokasi</th>
-                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">Persentase</th>
-                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">Realisasi</th>
-                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">Sisa</th>
-                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">Status</th>
-                <th className="p-4 w-20"></th>
+                <th className="p-4 font-semibold text-on-surface-variant">Kategori</th>
+                <th className="p-4 font-semibold text-on-surface-variant">Rekening</th>
+                <th className="p-4 font-semibold text-on-surface-variant">Alokasi</th>
+                <th className="p-4 font-semibold text-on-surface-variant">%</th>
+                <th className="p-4 font-semibold text-on-surface-variant">Realisasi</th>
+                <th className="p-4 font-semibold text-on-surface-variant">Sisa</th>
+                <th className="p-4 font-semibold text-on-surface-variant">Status</th>
+                <th className="p-4 w-12"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+            <tbody className="divide-y divide-outline-variant/10">
               {expenseAllocations.length === 0 ? (
-                <tr><td colSpan="8" className="p-8 text-center text-gray-400 dark:text-gray-500">Belum ada alokasi</td></tr>
+                <tr><td colSpan="8" className="p-8 text-center text-on-surface-variant">Belum ada alokasi</td></tr>
               ) : expenseAllocations.map(alloc => (
-                <tr key={alloc.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                <tr key={alloc.id} className="hover:bg-surface-container-high/40 transition-colors">
                   <td className="p-4">
-                    <select value={alloc.category} onChange={(e) => handleUpdateExpenseAllocation(alloc.id, 'category', e.target.value)} className="w-full p-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white text-sm">
+                    <select value={alloc.category} onChange={(e) => handleUpdateExpenseAllocation(alloc.id, 'category', e.target.value)} className="w-full p-2 bg-surface-container-lowest border-none rounded-xl focus:ring-1 focus:ring-primary/20 outline-none text-on-surface text-sm">
                       <option value="">Pilih Kategori...</option>
                       {(categories.expense || []).map(cat => {
                         const alreadyUsed = expenseAllocations.some(item => item.id !== alloc.id && item.category === cat);
-                        return <option key={cat} value={cat} disabled={alreadyUsed}>{cat}{alreadyUsed ? ' (sudah dipakai)' : ''}</option>;
+                        return <option key={cat} value={cat} disabled={alreadyUsed}>{cat}{alreadyUsed ? ' (sudah)' : ''}</option>;
                       })}
                     </select>
                   </td>
                   <td className="p-4">
-                    <select value={alloc.wallet} onChange={(e) => handleUpdateExpenseAllocation(alloc.id, 'wallet', e.target.value)} className="w-full p-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white text-sm">
+                    <select value={alloc.wallet} onChange={(e) => handleUpdateExpenseAllocation(alloc.id, 'wallet', e.target.value)} className="w-full p-2 bg-surface-container-lowest border-none rounded-xl focus:ring-1 focus:ring-primary/20 outline-none text-on-surface text-sm">
                       {wallets.map(w => <option key={w.id} value={w.id}>{w.icon} {w.name}</option>)}
                     </select>
                   </td>
                   <td className="p-4">
-                    <input type="number" value={alloc.amount || ''} onChange={(e) => handleUpdateExpenseAllocation(alloc.id, 'amount', e.target.value)} className="w-full p-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white text-sm font-semibold" placeholder="0" min="0"/>
+                    <input type="number" value={alloc.amount || ''} onChange={(e) => handleUpdateExpenseAllocation(alloc.id, 'amount', e.target.value)} className="w-full p-2 bg-surface-container-lowest border-none rounded-xl focus:ring-1 focus:ring-primary/20 outline-none text-on-surface text-sm font-semibold" placeholder="0" min="0" />
                   </td>
                   <td className="p-4">
-                    <div className="flex items-center gap-2">
-                      <input type="number" value={expenseBudgetValue > 0 ? (((parseFloat(alloc.amount) || 0) / expenseBudgetValue) * 100).toFixed(1) : '0.0'} onChange={(e) => handleUpdateExpenseAllocation(alloc.id, 'percentage', e.target.value)} className="w-20 p-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white text-sm font-semibold" step="0.1" min="0" max="100"/>
-                      <span className="text-gray-500 dark:text-gray-400">%</span>
+                    <div className="flex items-center gap-1">
+                      <input type="number" value={expenseBudgetValue > 0 ? (((parseFloat(alloc.amount) || 0) / expenseBudgetValue) * 100).toFixed(1) : '0.0'} onChange={(e) => handleUpdateExpenseAllocation(alloc.id, 'percentage', e.target.value)} className="w-16 p-2 bg-surface-container-lowest border-none rounded-xl focus:ring-1 focus:ring-primary/20 outline-none text-on-surface text-sm font-semibold" step="0.1" min="0" max="100" />
+                      <span className="text-on-surface-variant text-xs">%</span>
                     </div>
                   </td>
-                  <td className="p-4 font-semibold text-amber-600 dark:text-amber-400">{fmt(spendingByCategory.get(alloc.category || 'Tanpa Kategori') || 0)}</td>
-                  <td className={`p-4 font-semibold ${((parseFloat(alloc.amount) || 0) - (spendingByCategory.get(alloc.category || 'Tanpa Kategori') || 0)) >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>
+                  <td className="p-4 font-semibold text-tertiary">{fmt(spendingByCategory.get(alloc.category || 'Tanpa Kategori') || 0)}</td>
+                  <td className={`p-4 font-semibold ${((parseFloat(alloc.amount) || 0) - (spendingByCategory.get(alloc.category || 'Tanpa Kategori') || 0)) >= 0 ? 'text-primary' : 'text-on-error-container'}`}>
                     {fmt((parseFloat(alloc.amount) || 0) - (spendingByCategory.get(alloc.category || 'Tanpa Kategori') || 0))}
                   </td>
                   <td className="p-4">
@@ -714,8 +699,8 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
                     })()}
                   </td>
                   <td className="p-4 text-center">
-                    <button onClick={() => handleDeleteExpenseAllocation(alloc.id)} className="text-gray-300 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 transition-colors">
-                      <Trash2 size={16}/>
+                    <button onClick={() => handleDeleteExpenseAllocation(alloc.id)} className="p-1.5 text-on-surface-variant hover:text-on-error-container hover:bg-error-container rounded-lg transition-colors">
+                      <Icon name="delete" size={16} />
                     </button>
                   </td>
                 </tr>
@@ -723,82 +708,70 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
             </tbody>
           </table>
         </div>
-
         {expenseAllocations.length > 0 && varianceAgainstExpenseAllocation < 0 && (
-          <div className="p-4 bg-red-50 dark:bg-red-900/20 border-t border-red-200 dark:border-red-800 flex gap-3">
-            <AlertTriangle className="text-red-600 dark:text-red-400 shrink-0" size={20}/>
+          <div className="p-4 bg-error-container/20 border-t border-error-container/40 flex gap-3">
+            <Icon name="warning" size={20} className="text-on-error-container shrink-0" />
             <div>
-              <p className="text-sm font-semibold text-red-700 dark:text-red-300">Perhatian: Realisasi pengeluaran kategori sudah melebihi total alokasi kategori.</p>
-              <p className="text-xs text-red-600 dark:text-red-300 mt-1">Selisih over-budget {fmt(Math.abs(varianceAgainstExpenseAllocation))}.</p>
+              <p className="text-sm font-semibold text-on-error-container">Perhatian: Realisasi pengeluaran kategori sudah melebihi total alokasi kategori.</p>
+              <p className="text-xs text-on-error-container/80 mt-1">Selisih over-budget {fmt(Math.abs(varianceAgainstExpenseAllocation))}.</p>
             </div>
           </div>
         )}
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-        <div className="p-4 border-b dark:border-gray-700">
+      {/* ── Investment Allocation Table ── */}
+      <div className="bg-surface-container-low rounded-2xl overflow-hidden">
+        <div className="p-5 border-b border-outline-variant/20">
           <div className="flex justify-between items-center">
-            <h3 className="font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2">
-              <BarChart3 size={18} className="text-indigo-500"/> {t('salaryAllocator.investmentBreakdown')}
+            <h3 className="font-bold text-on-surface flex items-center gap-2">
+              <Icon name="trending_up" size={18} className="text-primary" /> {t('salaryAllocator.investmentBreakdown')}
             </h3>
-            <button onClick={handleAddInvestmentAllocation} disabled={!selectedWallet} className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex gap-2 items-center transition-colors">
-              <Plus size={16}/> Tambah Alokasi
+            <button onClick={handleAddInvestmentAllocation} disabled={!selectedWallet} className="bg-surface-container-high disabled:opacity-50 text-on-surface px-3 py-1.5 rounded-xl text-sm font-semibold flex gap-1.5 items-center hover:bg-surface-container-highest transition-colors disabled:cursor-not-allowed">
+              <Icon name="add" size={16} /> Tambah Alokasi
             </button>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Bagian ini khusus alokasi investasi, terpisah dari alokasi expenses.</p>
-          <div className="mt-3 p-3 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 text-xs">
-            <p className="font-semibold text-indigo-700 dark:text-indigo-300">Total alokasi investasi: {fmt(totalAllocatedInvestment)}</p>
-            <p className="text-indigo-600 dark:text-indigo-400 mt-1">Realisasi investasi bulan ini: {fmt(totalInvestmentSpent)}</p>
-            <p className={`mt-1 ${varianceAgainstInvestmentAllocation >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-              {varianceAgainstInvestmentAllocation >= 0
-                ? `Sisa alokasi investasi: ${fmt(varianceAgainstInvestmentAllocation)}`
-                : `Melebihi alokasi investasi: ${fmt(Math.abs(varianceAgainstInvestmentAllocation))}`}
-            </p>
+          <p className="text-xs text-on-surface-variant mt-2">Bagian ini khusus alokasi investasi, terpisah dari alokasi expenses.</p>
+          <div className="mt-3 p-3 rounded-xl bg-surface-container text-xs">
+            <p className="font-semibold text-on-surface">Total alokasi investasi: {fmt(totalAllocatedInvestment)}</p>
+            <p className="text-on-surface-variant mt-1">Realisasi investasi bulan ini: {fmt(totalInvestmentSpent)} | {varianceAgainstInvestmentAllocation >= 0 ? `Sisa ${fmt(varianceAgainstInvestmentAllocation)}` : `Melebihi ${fmt(Math.abs(varianceAgainstInvestmentAllocation))}`}</p>
           </div>
         </div>
-
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
+            <thead className="bg-surface-container border-b border-outline-variant/20">
               <tr>
-                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">{t('salaryAllocator.investmentPosition')}</th>
-                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">Rekening</th>
-                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">Alokasi</th>
-                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">Persentase</th>
-                <th className="p-4 w-20"></th>
+                <th className="p-4 font-semibold text-on-surface-variant">{t('salaryAllocator.investmentPosition')}</th>
+                <th className="p-4 font-semibold text-on-surface-variant">Rekening</th>
+                <th className="p-4 font-semibold text-on-surface-variant">Alokasi</th>
+                <th className="p-4 font-semibold text-on-surface-variant">%</th>
+                <th className="p-4 w-12"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+            <tbody className="divide-y divide-outline-variant/10">
               {investmentAllocations.length === 0 ? (
-                <tr><td colSpan="5" className="p-8 text-center text-gray-400 dark:text-gray-500">Belum ada alokasi investasi</td></tr>
+                <tr><td colSpan="5" className="p-8 text-center text-on-surface-variant">Belum ada alokasi investasi</td></tr>
               ) : investmentAllocations.map(alloc => (
-                <tr key={alloc.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                <tr key={alloc.id} className="hover:bg-surface-container-high/40 transition-colors">
                   <td className="p-4">
-                    <input
-                      type="text"
-                      value={alloc.label || ''}
-                      onChange={(e) => handleUpdateInvestmentAllocation(alloc.id, 'label', e.target.value)}
-                      className="w-full p-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white text-sm"
-                      placeholder="Contoh: Saham, Emas, Reksadana"
-                    />
+                    <input type="text" value={alloc.label || ''} onChange={(e) => handleUpdateInvestmentAllocation(alloc.id, 'label', e.target.value)} className="w-full p-2 bg-surface-container-lowest border-none rounded-xl focus:ring-1 focus:ring-primary/20 outline-none text-on-surface text-sm" placeholder="Saham, Emas, Reksadana..." />
                   </td>
                   <td className="p-4">
-                    <select value={alloc.wallet} onChange={(e) => handleUpdateInvestmentAllocation(alloc.id, 'wallet', e.target.value)} className="w-full p-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white text-sm">
+                    <select value={alloc.wallet} onChange={(e) => handleUpdateInvestmentAllocation(alloc.id, 'wallet', e.target.value)} className="w-full p-2 bg-surface-container-lowest border-none rounded-xl focus:ring-1 focus:ring-primary/20 outline-none text-on-surface text-sm">
                       {wallets.map(w => <option key={w.id} value={w.id}>{w.icon} {w.name}</option>)}
                     </select>
                   </td>
                   <td className="p-4">
-                    <input type="number" value={alloc.amount || ''} onChange={(e) => handleUpdateInvestmentAllocation(alloc.id, 'amount', e.target.value)} className="w-full p-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white text-sm font-semibold" placeholder="0" min="0"/>
+                    <input type="number" value={alloc.amount || ''} onChange={(e) => handleUpdateInvestmentAllocation(alloc.id, 'amount', e.target.value)} className="w-full p-2 bg-surface-container-lowest border-none rounded-xl focus:ring-1 focus:ring-primary/20 outline-none text-on-surface text-sm font-semibold" placeholder="0" min="0" />
                   </td>
                   <td className="p-4">
-                    <div className="flex items-center gap-2">
-                      <input type="number" value={totalIncome > 0 ? (((parseFloat(alloc.amount) || 0) / totalIncome) * 100).toFixed(1) : '0.0'} onChange={(e) => handleUpdateInvestmentAllocation(alloc.id, 'percentage', e.target.value)} className="w-20 p-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white text-sm font-semibold" step="0.1" min="0" max="100"/>
-                      <span className="text-gray-500 dark:text-gray-400">%</span>
+                    <div className="flex items-center gap-1">
+                      <input type="number" value={totalIncome > 0 ? (((parseFloat(alloc.amount) || 0) / totalIncome) * 100).toFixed(1) : '0.0'} onChange={(e) => handleUpdateInvestmentAllocation(alloc.id, 'percentage', e.target.value)} className="w-16 p-2 bg-surface-container-lowest border-none rounded-xl focus:ring-1 focus:ring-primary/20 outline-none text-on-surface text-sm font-semibold" step="0.1" min="0" max="100" />
+                      <span className="text-on-surface-variant text-xs">%</span>
                     </div>
                   </td>
                   <td className="p-4 text-center">
-                    <button onClick={() => handleDeleteInvestmentAllocation(alloc.id)} className="text-gray-300 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 transition-colors">
-                      <Trash2 size={16}/>
+                    <button onClick={() => handleDeleteInvestmentAllocation(alloc.id)} className="p-1.5 text-on-surface-variant hover:text-on-error-container hover:bg-error-container rounded-lg transition-colors">
+                      <Icon name="delete" size={16} />
                     </button>
                   </td>
                 </tr>
@@ -806,22 +779,22 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
             </tbody>
           </table>
         </div>
-
         {investmentAllocations.length > 0 && varianceAgainstInvestmentAllocation < 0 && (
-          <div className="p-4 bg-red-50 dark:bg-red-900/20 border-t border-red-200 dark:border-red-800 flex gap-3">
-            <AlertTriangle className="text-red-600 dark:text-red-400 shrink-0" size={20}/>
+          <div className="p-4 bg-error-container/20 border-t border-error-container/40 flex gap-3">
+            <Icon name="warning" size={20} className="text-on-error-container shrink-0" />
             <div>
-              <p className="text-sm font-semibold text-red-700 dark:text-red-300">Perhatian: Realisasi investasi bulan ini sudah melebihi total alokasi investasi.</p>
-              <p className="text-xs text-red-600 dark:text-red-300 mt-1">Selisih over-budget {fmt(Math.abs(varianceAgainstInvestmentAllocation))}.</p>
+              <p className="text-sm font-semibold text-on-error-container">Perhatian: Realisasi investasi bulan ini sudah melebihi total alokasi investasi.</p>
+              <p className="text-xs text-on-error-container/80 mt-1">Selisih over-budget {fmt(Math.abs(varianceAgainstInvestmentAllocation))}.</p>
             </div>
           </div>
         )}
       </div>
 
+      {/* ── Pie chart + Summary ── */}
       {hasAnyAllocation && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col">
-            <h3 className="font-bold text-gray-700 dark:text-gray-200 mb-4">Distribusi Alokasi</h3>
+          <div className="bg-surface-container-low rounded-2xl p-6 flex flex-col">
+            <h3 className="font-bold text-on-surface mb-4">Distribusi Alokasi</h3>
             {[...expenseAllocations.map(a => ({ name: a.category || 'Tanpa Kategori', value: parseFloat(a.amount) || 0 })), ...investmentAllocations.map(a => ({ name: `INV: ${a.label || 'Tanpa Nama'}`, value: parseFloat(a.amount) || 0 }))].filter(a => a.value > 0).length > 0 ? (
               <ResponsiveContainer width="100%" height={250}>
                 <RePieChart>
@@ -833,84 +806,83 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
                 </RePieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex-1 flex items-center justify-center text-gray-400 dark:text-gray-500">Masukkan nominal alokasi untuk melihat diagram</div>
+              <div className="flex-1 flex items-center justify-center text-on-surface-variant text-sm">Masukkan nominal alokasi untuk melihat diagram</div>
             )}
           </div>
 
-          <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <h3 className="font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-              <Target size={18} className="text-amber-500"/> Ringkasan Kontrol Bulan Ini
+          <div className="bg-surface-container-low rounded-2xl p-6">
+            <h3 className="font-bold text-on-surface mb-4 flex items-center gap-2">
+              <Icon name="flag" size={18} className="text-tertiary" /> Ringkasan Kontrol Bulan Ini
             </h3>
             <div className="space-y-3 text-sm">
-              <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-100 dark:border-amber-800">
-                <p className="font-semibold text-amber-900 dark:text-amber-300">Expenses Terkategori</p>
-                <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">{monthlyExpenseTransactions.length} transaksi expense tercatat</p>
+              <div className="p-4 bg-surface-container rounded-xl">
+                <p className="font-semibold text-on-surface">Expenses Terkategori</p>
+                <p className="text-xs text-on-surface-variant mt-1">{monthlyExpenseTransactions.length} transaksi expense tercatat</p>
               </div>
-              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
-                <p className="font-semibold text-blue-900 dark:text-blue-300">Sisa Alokasi Kategori</p>
-                <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">{fmt(Math.max(varianceAgainstExpenseAllocation, 0))}</p>
+              <div className="p-4 bg-surface-container rounded-xl">
+                <p className="font-semibold text-on-surface">Sisa Alokasi Kategori</p>
+                <p className="text-xs text-primary mt-1">{fmt(Math.max(varianceAgainstExpenseAllocation, 0))}</p>
               </div>
-              <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800">
-                <p className="font-semibold text-purple-900 dark:text-purple-300">Sisa Alokasi Investasi</p>
-                <p className="text-xs text-purple-700 dark:text-purple-400 mt-1">{fmt(Math.max(varianceAgainstInvestmentAllocation, 0))}</p>
+              <div className="p-4 bg-surface-container rounded-xl">
+                <p className="font-semibold text-on-surface">Sisa Alokasi Investasi</p>
+                <p className="text-xs text-primary mt-1">{fmt(Math.max(varianceAgainstInvestmentAllocation, 0))}</p>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-        <div className="p-4 border-b dark:border-gray-700">
-          <h3 className="font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2">
-            <Receipt size={18} className="text-emerald-500"/> {t('salaryAllocator.transactionHistory')}
+      {/* ── Transaction History ── */}
+      <div className="bg-surface-container-low rounded-2xl overflow-hidden">
+        <div className="p-5 border-b border-outline-variant/20">
+          <h3 className="font-bold text-on-surface flex items-center gap-2">
+            <Icon name="receipt" size={18} className="text-primary" /> {t('salaryAllocator.transactionHistory')}
           </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('salaryAllocator.transactionHistoryDesc')}</p>
+          <p className="text-xs text-on-surface-variant mt-1">{t('salaryAllocator.transactionHistoryDesc')}</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
+            <thead className="bg-surface-container border-b border-outline-variant/20">
               <tr>
-                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">{t('salaryAllocator.txDate')}</th>
-                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">{t('salaryAllocator.txType')}</th>
-                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">{t('salaryAllocator.txCategory')}</th>
-                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">{t('salaryAllocator.txNote')}</th>
-                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300">{t('salaryAllocator.txWallet')}</th>
-                <th className="p-4 font-semibold text-gray-600 dark:text-gray-300 text-right">{t('salaryAllocator.txAmount')}</th>
+                <th className="p-4 font-semibold text-on-surface-variant">{t('salaryAllocator.txDate')}</th>
+                <th className="p-4 font-semibold text-on-surface-variant">{t('salaryAllocator.txType')}</th>
+                <th className="p-4 font-semibold text-on-surface-variant">{t('salaryAllocator.txCategory')}</th>
+                <th className="p-4 font-semibold text-on-surface-variant">{t('salaryAllocator.txNote')}</th>
+                <th className="p-4 font-semibold text-on-surface-variant">{t('salaryAllocator.txWallet')}</th>
+                <th className="p-4 font-semibold text-on-surface-variant text-right">{t('salaryAllocator.txAmount')}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+            <tbody className="divide-y divide-outline-variant/10">
               {monthlyAllTransactions.length === 0 ? (
-                <tr><td colSpan="6" className="p-8 text-center text-gray-400 dark:text-gray-500">{t('salaryAllocator.txEmpty')}</td></tr>
+                <tr><td colSpan="6" className="p-8 text-center text-on-surface-variant">{t('salaryAllocator.txEmpty')}</td></tr>
               ) : monthlyAllTransactions.map(tx => {
                 const typeLabel = tx.type === 'expense' ? t('salaryAllocator.txTypeExpense')
                   : tx.type === 'income' ? t('salaryAllocator.txTypeIncome')
                   : tx.type === 'investment' ? t('salaryAllocator.txTypeInvestment')
                   : tx.type === 'investment_sale' ? t('salaryAllocator.txTypeInvestmentSale')
                   : t('salaryAllocator.txTypeTransfer');
-                const typeColor = tx.type === 'expense' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                  : tx.type === 'income' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                  : tx.type === 'investment' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                  : tx.type === 'investment_sale' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'
-                  : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
-                const amountColor = tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-400'
-                  : tx.type === 'expense' ? 'text-red-600 dark:text-red-400'
-                  : tx.type === 'investment' ? 'text-blue-600 dark:text-blue-400'
-                  : tx.type === 'investment_sale' ? 'text-indigo-600 dark:text-indigo-400'
-                  : 'text-purple-600 dark:text-purple-400';
+                const badgeClass = tx.type === 'expense' ? 'text-on-error-container bg-error-container'
+                  : tx.type === 'income' ? 'text-on-secondary-container bg-secondary-container'
+                  : tx.type === 'investment' ? 'text-primary bg-primary-fixed/30'
+                  : tx.type === 'investment_sale' ? 'text-tertiary bg-tertiary-fixed/30'
+                  : 'text-on-surface-variant bg-surface-container';
+                const amountColor = tx.type === 'income' ? 'text-on-secondary-container'
+                  : tx.type === 'expense' ? 'text-on-error-container'
+                  : tx.type === 'investment' ? 'text-primary'
+                  : tx.type === 'investment_sale' ? 'text-tertiary'
+                  : 'text-on-surface-variant';
                 const walletName = (() => {
                   const wId = tx.walletId || tx.sourceWalletId;
                   const w = walletMap.get(wId);
                   return w ? `${w.icon} ${w.name}` : '-';
                 })();
                 return (
-                  <tr key={tx.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                    <td className="p-4 text-gray-600 dark:text-gray-300 whitespace-nowrap">{formatDate(tx.date)}</td>
-                    <td className="p-4">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${typeColor}`}>{typeLabel}</span>
-                    </td>
-                    <td className="p-4 text-gray-700 dark:text-gray-200">{tx.category || '-'}</td>
-                    <td className="p-4 text-gray-500 dark:text-gray-400 max-w-[200px] truncate">{tx.note || '-'}</td>
-                    <td className="p-4 text-gray-500 dark:text-gray-400 whitespace-nowrap">{walletName}</td>
+                  <tr key={tx.id} className="hover:bg-surface-container-high/40 transition-colors">
+                    <td className="p-4 text-on-surface-variant whitespace-nowrap">{formatDate(tx.date)}</td>
+                    <td className="p-4"><span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${badgeClass}`}>{typeLabel}</span></td>
+                    <td className="p-4 text-on-surface">{tx.category || '-'}</td>
+                    <td className="p-4 text-on-surface-variant max-w-[200px] truncate">{tx.note || '-'}</td>
+                    <td className="p-4 text-on-surface-variant whitespace-nowrap">{walletName}</td>
                     <td className={`p-4 font-semibold text-right whitespace-nowrap ${amountColor}`}>{fmt(tx.amount)}</td>
                   </tr>
                 );
