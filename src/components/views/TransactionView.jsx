@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Bot, Edit2, Trash2, Save, ArrowRightLeft, Briefcase, ScanLine } from 'lucide-react';
 import Icon from '../ui/Icon.jsx';
 import { collection, addDoc, doc, increment, serverTimestamp, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
