@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, ChevronRight, ChevronLeft, Check, Wand2 } from 'lucide-react';
+import Icon from '../ui/Icon.jsx';
 import { collection, doc, updateDoc, getDoc, setDoc, serverTimestamp, query, getDocs } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 
@@ -11,7 +11,7 @@ const PERCENTAGE_PRESETS = [
   { label: '70/10/20 (Kebutuhan)', needs: 70, wants: 10, savings: 20 },
 ];
 
-const BudgetWizard = ({ isOpen, onClose, categories, wallets, userId, appId, selectedMonth }) => {
+const BudgetWizard = ({ isOpen, onClose, categories, userId, appId, selectedMonth }) => {
   const [step, setStep]         = useState(0);
   const [method, setMethod]     = useState('percentage'); // 'percentage' | 'fixed'
   const [income, setIncome]     = useState('');
@@ -95,23 +95,23 @@ const BudgetWizard = ({ isOpen, onClose, categories, wallets, userId, appId, sel
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in"
+      className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in"
       onClick={e => { if (e.target === e.currentTarget) onClose(false); }}
     >
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col animate-in zoom-in-95">
+      <div className="bg-surface-container-lowest rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col animate-in zoom-in-95">
 
         {/* Header */}
-        <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-start shrink-0">
+        <div className="p-6 border-b border-outline-variant/20 flex justify-between items-start shrink-0">
           <div>
-            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-              <Wand2 size={22} className="text-emerald-500"/> Budget Setup Wizard
+            <h2 className="text-xl font-bold text-on-surface flex items-center gap-2">
+              <Icon name="auto_fix_high" size={22} className="text-primary"/> Budget Setup Wizard
             </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            <p className="text-sm text-on-surface-variant mt-0.5">
               Langkah {step + 1} dari {STEPS.length}: {STEPS[step]}
             </p>
           </div>
-          <button onClick={() => onClose(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-            <X size={22}/>
+          <button onClick={() => onClose(false)} className="p-2 rounded-xl text-on-surface-variant hover:bg-surface-container transition-colors">
+            <Icon name="close" size={22}/>
           </button>
         </div>
 
@@ -122,15 +122,15 @@ const BudgetWizard = ({ isOpen, onClose, categories, wallets, userId, appId, sel
               <button
                 onClick={() => i < step && setStep(i)}
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                  i < step  ? 'bg-emerald-500 text-white cursor-pointer'
-                  : i === step ? 'bg-emerald-600 text-white ring-4 ring-emerald-200'
-                  : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-default'
+                  i < step  ? 'bg-primary text-on-primary cursor-pointer'
+                  : i === step ? 'bg-primary text-on-primary ring-4 ring-primary/20'
+                  : 'bg-surface-container text-on-surface-variant cursor-default'
                 }`}
               >
-                {i < step ? <Check size={14}/> : i + 1}
+                {i < step ? <Icon name="check" size={14}/> : i + 1}
               </button>
               {i < STEPS.length - 1 && (
-                <div className={`h-0.5 w-8 rounded-full transition-all ${i < step ? 'bg-emerald-500' : 'bg-gray-200 dark:bg-gray-700'}`}/>
+                <div className={`h-0.5 w-8 rounded-full transition-all ${i < step ? 'bg-primary' : 'bg-surface-container'}`}/>
               )}
             </div>
           ))}
@@ -142,23 +142,23 @@ const BudgetWizard = ({ isOpen, onClose, categories, wallets, userId, appId, sel
           {/* Step 0: Method */}
           {step === 0 && (
             <div className="space-y-4">
-              <p className="text-gray-600 dark:text-gray-300">Pilih pendekatan budgeting yang ingin kamu gunakan:</p>
+              <p className="text-on-surface-variant">Pilih pendekatan budgeting yang ingin kamu gunakan:</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <button
                   onClick={() => setMethod('percentage')}
-                  className={`p-5 rounded-xl border-2 text-left transition-all ${method === 'percentage' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300'}`}
+                  className={`p-5 rounded-2xl border-2 text-left transition-all ${method === 'percentage' ? 'border-primary bg-primary/5' : 'border-outline-variant hover:border-outline'}`}
                 >
-                  <p className="font-bold text-gray-800 dark:text-gray-100 mb-1">Percentage Budget</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Bagi pendapatanmu berdasarkan persentase (mis. 50/30/20). Mudah dan fleksibel.</p>
-                  {method === 'percentage' && <span className="mt-2 inline-block text-xs bg-emerald-500 text-white px-2 py-0.5 rounded-full">Dipilih</span>}
+                  <p className="font-bold text-on-surface mb-1">Percentage Budget</p>
+                  <p className="text-sm text-on-surface-variant">Bagi pendapatanmu berdasarkan persentase (mis. 50/30/20). Mudah dan fleksibel.</p>
+                  {method === 'percentage' && <span className="mt-2 inline-block text-xs bg-primary text-on-primary px-2 py-0.5 rounded-full">Dipilih</span>}
                 </button>
                 <button
                   onClick={() => setMethod('fixed')}
-                  className={`p-5 rounded-xl border-2 text-left transition-all ${method === 'fixed' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300'}`}
+                  className={`p-5 rounded-2xl border-2 text-left transition-all ${method === 'fixed' ? 'border-primary bg-primary/5' : 'border-outline-variant hover:border-outline'}`}
                 >
-                  <p className="font-bold text-gray-800 dark:text-gray-100 mb-1">Fixed Budget</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Tentukan nominal pasti untuk setiap kelompok pengeluaran. Cocok untuk yang sudah tahu angkanya.</p>
-                  {method === 'fixed' && <span className="mt-2 inline-block text-xs bg-emerald-500 text-white px-2 py-0.5 rounded-full">Dipilih</span>}
+                  <p className="font-bold text-on-surface mb-1">Fixed Budget</p>
+                  <p className="text-sm text-on-surface-variant">Tentukan nominal pasti untuk setiap kelompok pengeluaran. Cocok untuk yang sudah tahu angkanya.</p>
+                  {method === 'fixed' && <span className="mt-2 inline-block text-xs bg-primary text-on-primary px-2 py-0.5 rounded-full">Dipilih</span>}
                 </button>
               </div>
             </div>
@@ -167,20 +167,20 @@ const BudgetWizard = ({ isOpen, onClose, categories, wallets, userId, appId, sel
           {/* Step 1: Income */}
           {step === 1 && (
             <div className="space-y-4">
-              <p className="text-gray-600 dark:text-gray-300">Berapa total pendapatan kamu bulan ini?</p>
+              <p className="text-on-surface-variant">Berapa total pendapatan kamu bulan ini?</p>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400">Total Pendapatan (Rp)</label>
+                <label className="text-xs font-semibold text-on-surface-variant">Total Pendapatan (Rp)</label>
                 <input
                   type="number" min={1}
                   value={income}
                   onChange={e => setIncome(e.target.value)}
-                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl text-lg font-bold focus:ring-2 focus:ring-emerald-500 outline-none bg-white dark:bg-gray-700 dark:text-white"
+                  className="w-full p-3 bg-surface-container-low border-none rounded-2xl text-lg font-bold focus:ring-1 focus:ring-primary/20 outline-none text-on-surface"
                   placeholder="5000000"
                   autoFocus
                 />
               </div>
               {incomeNum > 0 && (
-                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl text-sm text-emerald-700 dark:text-emerald-400">
+                <div className="p-4 bg-primary/5 rounded-2xl text-sm text-primary">
                   Total pendapatan: <b>Rp {incomeNum.toLocaleString('id-ID')}</b>
                 </div>
               )}
@@ -190,37 +190,37 @@ const BudgetWizard = ({ isOpen, onClose, categories, wallets, userId, appId, sel
           {/* Step 2: Allocation */}
           {step === 2 && method === 'percentage' && (
             <div className="space-y-4">
-              <p className="text-gray-600 dark:text-gray-300">Pilih preset atau atur persentase sendiri:</p>
+              <p className="text-on-surface-variant">Pilih preset atau atur persentase sendiri:</p>
               <div className="space-y-2">
                 {PERCENTAGE_PRESETS.map((p, i) => (
                   <button
                     key={i}
                     onClick={() => setPreset(i)}
-                    className={`w-full p-4 rounded-xl border-2 text-left flex justify-between items-center transition-all ${preset === i ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300'}`}
+                    className={`w-full p-4 rounded-2xl border-2 text-left flex justify-between items-center transition-all ${preset === i ? 'border-primary bg-primary/5' : 'border-outline-variant hover:border-outline'}`}
                   >
-                    <span className="font-semibold text-gray-800 dark:text-gray-100">{p.label}</span>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 flex gap-3">
-                      <span className="text-blue-600">Kebutuhan {p.needs}%</span>
-                      <span className="text-purple-600">Keinginan {p.wants}%</span>
-                      <span className="text-emerald-600">Tabungan {p.savings}%</span>
+                    <span className="font-semibold text-on-surface">{p.label}</span>
+                    <div className="text-xs text-on-surface-variant flex gap-3">
+                      <span className="text-secondary">Kebutuhan {p.needs}%</span>
+                      <span className="text-tertiary">Keinginan {p.wants}%</span>
+                      <span className="text-primary">Tabungan {p.savings}%</span>
                     </div>
                   </button>
                 ))}
                 <button
                   onClick={() => setPreset(-1)}
-                  className={`w-full p-4 rounded-xl border-2 text-left transition-all ${preset === -1 ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300'}`}
+                  className={`w-full p-4 rounded-2xl border-2 text-left transition-all ${preset === -1 ? 'border-primary bg-primary/5' : 'border-outline-variant hover:border-outline'}`}
                 >
-                  <span className="font-semibold text-gray-800 dark:text-gray-100">Custom</span>
+                  <span className="font-semibold text-on-surface">Custom</span>
                   {preset === -1 && (
                     <div className="mt-3 grid grid-cols-3 gap-3">
                       {['needs','wants','savings'].map(k => (
                         <div key={k} className="space-y-1">
-                          <label className="text-xs text-gray-500 capitalize">{k === 'needs' ? 'Kebutuhan' : k === 'wants' ? 'Keinginan' : 'Tabungan'} (%)</label>
+                          <label className="text-xs text-on-surface-variant capitalize">{k === 'needs' ? 'Kebutuhan' : k === 'wants' ? 'Keinginan' : 'Tabungan'} (%)</label>
                           <input
                             type="number" min={0} max={100}
                             value={customSplit[k]}
                             onChange={e => setCustomSplit(prev => ({ ...prev, [k]: Number(e.target.value) }))}
-                            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 dark:text-white outline-none"
+                            className="w-full p-2 bg-surface-container-low border-none rounded-xl text-sm text-on-surface outline-none focus:ring-1 focus:ring-primary/20"
                             onClick={e => e.stopPropagation()}
                           />
                         </div>
@@ -244,16 +244,16 @@ const BudgetWizard = ({ isOpen, onClose, categories, wallets, userId, appId, sel
 
           {step === 2 && method === 'fixed' && (
             <div className="space-y-4">
-              <p className="text-gray-600 dark:text-gray-300">Tentukan nominal untuk setiap kelompok:</p>
+              <p className="text-on-surface-variant">Tentukan nominal untuk setiap kelompok:</p>
               {[['needs','Kebutuhan (wajib)','mis. sewa, makan, transportasi'], ['wants','Keinginan (optional)','mis. hiburan, makan luar, belanja'], ['savings','Tabungan / Investasi','mis. dana darurat, reksa dana, saham']].map(([k, label, hint]) => (
                 <div key={k} className="space-y-1">
-                  <label className="text-xs font-semibold text-gray-500 dark:text-gray-400">{label}</label>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">{hint}</p>
+                  <label className="text-xs font-semibold text-on-surface-variant">{label}</label>
+                  <p className="text-xs text-on-surface-variant/60">{hint}</p>
                   <input
                     type="number" min={0}
                     value={fixedGroups[k]}
                     onChange={e => setFixedGroups(prev => ({ ...prev, [k]: e.target.value }))}
-                    className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white dark:bg-gray-700 dark:text-white"
+                    className="w-full p-2.5 bg-surface-container-low border-none rounded-xl focus:ring-1 focus:ring-primary/20 outline-none text-on-surface"
                     placeholder="0"
                   />
                 </div>
@@ -265,29 +265,29 @@ const BudgetWizard = ({ isOpen, onClose, categories, wallets, userId, appId, sel
           {step === 3 && (
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <p className="text-gray-600 dark:text-gray-300">Distribusikan ke kategori pengeluaran:</p>
-                <span className={`text-xs font-semibold ${totalAllocated > totalBudgetable ? 'text-red-600' : 'text-emerald-600'}`}>
+                <p className="text-on-surface-variant">Distribusikan ke kategori pengeluaran:</p>
+                <span className={`text-xs font-semibold ${totalAllocated > totalBudgetable ? 'text-error' : 'text-primary'}`}>
                   {totalAllocated > totalBudgetable ? '⚠ Melebihi batas!' : `Sisa: Rp ${Math.max(0, totalBudgetable - totalAllocated).toLocaleString('id-ID')}`}
                 </span>
               </div>
-              <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-lg text-sm text-emerald-700 dark:text-emerald-400">
+              <div className="bg-primary/5 p-3 rounded-2xl text-sm text-primary">
                 Total untuk kategori: <b>Rp {totalBudgetable.toLocaleString('id-ID')}</b> (Kebutuhan + Keinginan)
               </div>
               <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
                 {expenseCats.length === 0 && (
-                  <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-4">Belum ada kategori pengeluaran. Tambahkan di menu Kategori.</p>
+                  <p className="text-on-surface-variant text-sm text-center py-4">Belum ada kategori pengeluaran. Tambahkan di menu Kategori.</p>
                 )}
                 {expenseCats.map(cat => (
                   <div key={cat.id} className="flex items-center gap-3">
-                    <span className="flex-1 text-sm text-gray-700 dark:text-gray-300 font-medium">{cat.name}</span>
-                    <span className="text-xs text-gray-400 dark:text-gray-500 w-24 text-right">
+                    <span className="flex-1 text-sm text-on-surface font-medium">{cat.name}</span>
+                    <span className="text-xs text-on-surface-variant w-24 text-right">
                       {cat.budget > 0 ? `Saat ini: ${cat.budget.toLocaleString('id-ID')}` : ''}
                     </span>
                     <input
                       type="number" min={0}
                       value={catBudgets[cat.name] ?? cat.budget ?? ''}
                       onChange={e => setCatBudgets(prev => ({ ...prev, [cat.name]: e.target.value }))}
-                      className="w-36 p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none text-right"
+                      className="w-36 p-2 bg-surface-container-low border-none rounded-xl text-sm text-on-surface focus:ring-1 focus:ring-primary/20 outline-none text-right"
                       placeholder="Budget Rp"
                     />
                   </div>
@@ -299,56 +299,56 @@ const BudgetWizard = ({ isOpen, onClose, categories, wallets, userId, appId, sel
           {/* Step 4: Review */}
           {step === 4 && (
             <div className="space-y-4">
-              <p className="text-gray-600 dark:text-gray-300">Review semua setting sebelum disimpan:</p>
-              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-gray-500">Metode</span><span className="font-semibold text-gray-800 dark:text-gray-100">{method === 'percentage' ? 'Percentage Budget' : 'Fixed Budget'}</span></div>
-                <div className="flex justify-between"><span className="text-gray-500">Pendapatan</span><span className="font-semibold text-gray-800 dark:text-gray-100">Rp {incomeNum.toLocaleString('id-ID')}</span></div>
-                <div className="flex justify-between"><span className="text-gray-500">Alokasi Kebutuhan</span><span className="font-semibold text-blue-600">Rp {alloc.needs.toLocaleString('id-ID')}</span></div>
-                <div className="flex justify-between"><span className="text-gray-500">Alokasi Keinginan</span><span className="font-semibold text-purple-600">Rp {alloc.wants.toLocaleString('id-ID')}</span></div>
-                <div className="flex justify-between"><span className="text-gray-500">Tabungan/Investasi</span><span className="font-semibold text-emerald-600">Rp {alloc.savings.toLocaleString('id-ID')}</span></div>
+              <p className="text-on-surface-variant">Review semua setting sebelum disimpan:</p>
+              <div className="bg-surface-container-low rounded-2xl p-4 space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-on-surface-variant">Metode</span><span className="font-semibold text-on-surface">{method === 'percentage' ? 'Percentage Budget' : 'Fixed Budget'}</span></div>
+                <div className="flex justify-between"><span className="text-on-surface-variant">Pendapatan</span><span className="font-semibold text-on-surface">Rp {incomeNum.toLocaleString('id-ID')}</span></div>
+                <div className="flex justify-between"><span className="text-on-surface-variant">Alokasi Kebutuhan</span><span className="font-semibold text-secondary">Rp {alloc.needs.toLocaleString('id-ID')}</span></div>
+                <div className="flex justify-between"><span className="text-on-surface-variant">Alokasi Keinginan</span><span className="font-semibold text-tertiary">Rp {alloc.wants.toLocaleString('id-ID')}</span></div>
+                <div className="flex justify-between"><span className="text-on-surface-variant">Tabungan/Investasi</span><span className="font-semibold text-primary">Rp {alloc.savings.toLocaleString('id-ID')}</span></div>
               </div>
               {Object.keys(catBudgets).length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Budget per Kategori yang Diubah:</p>
+                  <p className="text-xs font-semibold text-on-surface-variant mb-2">Budget per Kategori yang Diubah:</p>
                   <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                     {Object.entries(catBudgets).filter(([, v]) => Number(v) > 0).map(([name, val]) => (
                       <div key={name} className="flex justify-between text-sm">
-                        <span className="text-gray-600 dark:text-gray-300">{name}</span>
-                        <span className="font-semibold text-gray-800 dark:text-gray-100">Rp {Number(val).toLocaleString('id-ID')}</span>
+                        <span className="text-on-surface-variant">{name}</span>
+                        <span className="font-semibold text-on-surface">Rp {Number(val).toLocaleString('id-ID')}</span>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-              {error && <p className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">{error}</p>}
+              {error && <p className="text-sm text-error bg-error-container/30 p-3 rounded-2xl">{error}</p>}
             </div>
           )}
 
         </div>
 
         {/* Footer nav */}
-        <div className="p-6 border-t border-gray-100 dark:border-gray-700 flex justify-between shrink-0">
+        <div className="p-6 border-t border-outline-variant/20 flex justify-between shrink-0">
           <button
             onClick={() => step === 0 ? onClose(false) : setStep(s => s - 1)}
-            className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="flex items-center gap-2 text-on-surface-variant hover:text-on-surface px-4 py-2 rounded-xl hover:bg-surface-container transition-colors"
           >
-            <ChevronLeft size={18}/> {step === 0 ? 'Batal' : 'Kembali'}
+            <Icon name="chevron_left" size={18}/> {step === 0 ? 'Batal' : 'Kembali'}
           </button>
           {step < STEPS.length - 1 ? (
             <button
               onClick={() => setStep(s => s + 1)}
               disabled={(step === 1 && incomeNum <= 0)}
-              className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-semibold"
+              className="flex items-center gap-2 bg-primary text-on-primary px-6 py-2 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-all font-semibold hover:scale-[0.98] active:scale-95 shadow-lg shadow-primary/20"
             >
-              Lanjut <ChevronRight size={18}/>
+              Lanjut <Icon name="chevron_right" size={18}/>
             </button>
           ) : (
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 disabled:opacity-40 transition-colors font-semibold"
+              className="flex items-center gap-2 bg-primary text-on-primary px-6 py-2 rounded-xl disabled:opacity-40 transition-all font-semibold hover:scale-[0.98] active:scale-95 shadow-lg shadow-primary/20"
             >
-              {isSaving ? 'Menyimpan…' : <><Check size={18}/> Terapkan Budget</>}
+              {isSaving ? 'Menyimpan…' : <><Icon name="check" size={18}/> Terapkan Budget</>}
             </button>
           )}
         </div>

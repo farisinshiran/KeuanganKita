@@ -7,6 +7,96 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.1.0] - 2026-03-20
+
+### 🎨 Redesign — Material Design 3 UI Overhaul
+
+Full visual redesign of every view and the layout shell. The app now uses a cohesive Material Design 3 token system instead of ad-hoc Tailwind color utilities.
+
+#### Design System
+- Defined MD3 color roles as Tailwind CSS custom tokens in `tailwind.config.js`: `primary`, `on-primary`, `primary-container`, `on-primary-container`, `secondary-container`, `on-secondary-container`, `tertiary`, `tertiary-fixed`, `surface`, `surface-container-lowest/low/default/high/highest`, `on-surface`, `on-surface-variant`, `outline-variant`, `error-container`, `on-error-container`
+- Switched typography to **Manrope** (Google Fonts) throughout
+- Switched icon library from **Lucide React** to **Material Symbols Outlined** (variable font, loaded via `index.html`)
+- Added `Icon.jsx` wrapper component (`name`, `fill`, `weight`, `size`, `className` props)
+
+#### Layout Shell
+- `Sidebar.jsx` — rebuilt with 3-group navigation, MD3 surface containers, active state pill
+- `App.jsx` — updated layout shell to match new surface hierarchy
+
+#### Views Restyled (Phase 3 — Core)
+- **DashboardView** — MD3 stat cards, chart containers, budget progress bars
+- **WalletView** — bento layout, all 6 wallet types, RDN wallet type added
+- **InvestmentView** — asset list, P&L badges with `secondary-container` / `error-container`
+- **AIAdvisorView** — model switcher overlay, chat bubbles, settings panel
+
+#### Views Restyled (Phase 4 — Planning)
+- **SavingsGoalView** — 3-col goal cards, status badge variants
+- **EducationFundView** — child pill tabs, 12% inflation roadmap cards
+- **CategoryView** — expense/income pill tabs, category tile grid
+- **SalaryAllocatorView** — period navigator, hero stat strip, allocation tables, pie chart summary
+- **IncomeDiversificationView** — 4-stat strip, active/passive bar, SVG passive-% gauge
+- **SalarySlipArchiveView** — OCR upload card, trend chart, slip detail modal with gradient header
+
+#### Views Restyled (Phase 5 — Services)
+- **SubscriptionView** — brand-colored icon squares per service, annual projection on every card, 3-stat strip
+- **ZakatView** — MD3 source badges (live / cache / default), `secondary-container` nisab card, `from-primary to-primary-container` zakat hero
+- **WalletView** (RDN) — Rekening Dana Nasabah added to wallet-type selector
+- **AIAdvisorView** (model switcher) — gear → settings overlay with all OR_MODELS preserved
+- **TransactionView** (`investment_sale`) — filter chip present for investment-sale transactions
+
+#### Consistent Patterns Established
+- Cards: `bg-surface-container-low rounded-2xl p-5`
+- Featured / hero cards: `rounded-3xl` with gradient `from-primary to-primary-container`
+- Form inputs: `bg-surface-container-lowest border-none rounded-xl focus:ring-1 focus:ring-primary/20`
+- Primary buttons: `bg-primary text-on-primary rounded-xl shadow-lg shadow-primary/20 hover:scale-[0.98] active:scale-95 transition-all`
+- Table rows: `hover:bg-surface-container-high/40`, dividers `divide-outline-variant/10`
+- Badges: expense = `error-container`, income = `secondary-container`, investment = `primary-fixed/30`, investment_sale = `tertiary-fixed/30`
+
+---
+
+## [2.1.0] - 2026-03-20
+
+### 🎨 Redesign — Material Design 3 UI Overhaul
+
+Full visual redesign of every view and the layout shell. The app now uses a cohesive Material Design 3 token system instead of ad-hoc Tailwind color utilities.
+
+#### Design System
+- Defined MD3 color roles as Tailwind CSS custom tokens in `tailwind.config.js`: `primary`, `on-primary`, `primary-container`, `secondary-container`, `on-secondary-container`, `tertiary`, `tertiary-fixed`, `surface-container-lowest/low/default/high/highest`, `on-surface`, `on-surface-variant`, `outline-variant`, `error-container`, `on-error-container`
+- Switched typography to **Manrope** (Google Fonts) throughout
+- Replaced **Lucide React** icons with **Material Symbols Outlined** variable font loaded via `index.html`
+- Added `src/components/ui/Icon.jsx` wrapper component (`name`, `fill`, `weight`, `size`, `className` props)
+
+#### Layout Shell
+- `Sidebar.jsx` rebuilt with 3-group navigation, MD3 surface containers, active state pill
+- `App.jsx` layout shell updated to match new surface hierarchy
+
+#### Views Restyled — Core (Phase 3)
+- **DashboardView** — MD3 stat cards, chart containers, budget progress bars
+- **WalletView** — bento layout, all 6 wallet types including new RDN type
+- **InvestmentView** — asset list, P&L badges using `secondary-container` / `error-container`
+- **AIAdvisorView** — model switcher settings overlay, chat bubbles
+
+#### Views Restyled — Planning (Phase 4)
+- **SavingsGoalView** — 3-col goal cards with status badge variants
+- **EducationFundView** — child pill tabs, 12% inflation roadmap cards
+- **CategoryView** — expense/income pill tabs, category tile grid
+- **SalaryAllocatorView** — period navigator, hero stat strip, allocation tables, pie chart summary
+- **IncomeDiversificationView** — 4-stat strip, active/passive bar, SVG passive-% gauge
+- **SalarySlipArchiveView** — OCR upload card, trend chart, slip detail modal with gradient header
+
+#### Views Restyled — Services (Phase 5)
+- **SubscriptionView** — brand-colored icon squares per service (Netflix, Spotify, GitHub…), annual projection on every card, 3-stat strip
+- **ZakatView** — MD3 source badges (live / cache / default), `secondary-container` nisab status card, `from-primary to-primary-container` zakat hero gradient
+
+#### Consistent Patterns
+- Cards: `bg-surface-container-low rounded-2xl p-5`
+- Hero/featured: `rounded-3xl` + `bg-gradient-to-br from-primary to-primary-container`
+- Form inputs: `bg-surface-container-lowest border-none rounded-xl focus:ring-1 focus:ring-primary/20`
+- Primary buttons: `bg-primary text-on-primary rounded-xl shadow-lg shadow-primary/20 hover:scale-[0.98] active:scale-95`
+- Type badges: expense = `error-container`, income = `secondary-container`, investment = `primary-fixed/30`, investment_sale = `tertiary-fixed/30`
+
+---
+
 ## [2.0.0] - 2026-02-12
 
 ### 🚀 Added - Quick Add AI Scanner Feature

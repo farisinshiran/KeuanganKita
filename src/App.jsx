@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react';
 import { Plus, Wallet, Eye, EyeOff, Moon, Sun, Menu, RefreshCw, ScanLine, Bot } from 'lucide-react';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
-import { collection, addDoc, serverTimestamp, doc, setDoc, writeBatch } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, writeBatch } from 'firebase/firestore';
 
 // --- CONFIG & UTILS ---
 import { auth, db, appId, APP_VERSION, IS_DEMO_MODE } from './config/firebase';
@@ -72,7 +72,7 @@ async function migrateFromDemo(user, firestoreDb, firestoreAppId, rawJson = null
   for (const [colPath, docs] of Object.entries(store)) {
     if (!docs || typeof docs !== 'object') continue;
     // Pattern: artifacts/{any_appId}/users/{any_uid}/{collection}
-    const match = colPath.match(/^artifacts\/[^\/]+\/users\/[^\/]+\/(.+)$/);
+    const match = colPath.match(/^artifacts[/][^/]+[/]users[/][^/]+[/](.+)$/);
     if (!match) continue;
     const colName = match[1];
     for (const [docId, docData] of Object.entries(docs)) {
@@ -145,14 +145,14 @@ export default function App() {
       if (!raw) return;
       const store = JSON.parse(raw);
       const hasData = Object.values(store).some(col => Object.keys(col).length > 0);
-      if (hasData) setDemoMigration('prompt');
+      if (hasData) setTimeout(() => setDemoMigration('prompt'), 0);
     } catch { /* ignore */ }
   }, [user]);
 
   const handleMigrate = useCallback(async () => {
     setDemoMigration('migrating');
     try {
-      const { count, reason } = await migrateFromDemo(user, db, appId);
+      const { count } = await migrateFromDemo(user, db, appId);
       if (count === 0) {
         setDemoMigration('no_data');
         return;
@@ -173,7 +173,7 @@ export default function App() {
     setDemoMigration('migrating');
     setShowManualImport(false);
     try {
-      const { count, reason } = await migrateFromDemo(user, db, appId, manualJson.trim());
+      const { count } = await migrateFromDemo(user, db, appId, manualJson.trim());
       if (count === 0) {
         setDemoMigration('no_data');
         return;
@@ -188,9 +188,10 @@ export default function App() {
       setDemoMigration('error');
     }
   }, [user, manualJson]);
-  // ── AI panel toggle — intercepts 'ai-advisor' nav clicks ─
+  // ── AI panel toggle — intercepts 'ai-advisor' + 'quick-add' nav clicks ─
   const handleTabChange = useCallback((tab) => {
     if (tab === 'ai-advisor') { setIsAIOpen(prev => !prev); return; }
+    if (tab === 'quick-add') { setIsQuickAddModalOpen(true); return; }
     setActiveTab(tab);
   }, []);
   // ── Auth ────────────────────────────────────────────────────
@@ -324,7 +325,7 @@ export default function App() {
   const wBals = summary.walletBalances;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-100 flex flex-col md:flex-row transition-colors duration-300">
+    <div className="min-h-screen bg-background dark:bg-gray-900 font-sans text-on-background dark:text-gray-100 transition-colors duration-300">
 
       {/* ── Pull-to-Refresh overlay ── */}
       {isPulling && (
@@ -359,6 +360,60 @@ export default function App() {
         onLogout={handleLogout}
       />
 
+      {/* ── Fixed top header (desktop) ── */}
+      <header className="hidden md:flex fixed top-0 left-64 right-0 h-16 items-center px-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-green-100/20 dark:border-gray-700/50 z-40 gap-4">
+        <div className="flex-1">
+          <h2 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+            {(() => {
+              const tab = isAIOpen ? 'ai-advisor' : activeTab;
+              const allItems = [
+                { id: 'dashboard', label: 'Dashboard' },
+                { id: 'transactions', label: 'Transactions' },
+                { id: 'wallets', label: 'Wallets' },
+                { id: 'subscriptions', label: 'Subscriptions' },
+                { id: 'budget', label: 'Budget' },
+                { id: 'salary-allocator', label: 'Budget' },
+                { id: 'investments', label: 'Investments' },
+                { id: 'savings-goals', label: 'Savings Goals' },
+                { id: 'education-fund', label: 'Education Fund' },
+                { id: 'income-sources', label: 'Income Sources' },
+                { id: 'income-diversification', label: 'Income Sources' },
+                { id: 'zakat', label: 'Zakat Calculator' },
+                { id: 'salary-slips', label: 'Salary Slips' },
+                { id: 'salary-slip-archive', label: 'Salary Slips' },
+                { id: 'categories', label: 'Categories' },
+                { id: 'ai-advisor', label: 'AI Advisor' },
+              ];
+              return allItems.find(i => i.id === tab)?.label ?? 'Dompet Keluarga';
+            })()}
+          </h2>
+          <p className="text-xs text-slate-400 dark:text-slate-500">
+            {user?.displayName ? `Welcome back, ${user.displayName.split(' ')[0]}` : 'Family Finance'}
+          </p>
+        </div>
+        <button
+          onClick={() => setPrivacyMode(p => !p)}
+          className="p-2 rounded-full text-slate-400 hover:bg-green-50/50 dark:hover:bg-green-900/20 hover:text-primary transition-colors"
+          title={privacyMode ? 'Show balances' : 'Hide balances'}
+        >
+          <Eye size={20} className={privacyMode ? 'hidden' : ''} />
+          <EyeOff size={20} className={privacyMode ? '' : 'hidden'} />
+        </button>
+        <button
+          onClick={() => setDarkMode(d => !d)}
+          className="p-2 rounded-full text-slate-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 hover:text-amber-500 transition-colors"
+        >
+          {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+        </button>
+        {user?.photoURL ? (
+          <img src={user.photoURL} alt="Profile" className="w-8 h-8 rounded-full border-2 border-primary/20" />
+        ) : (
+          <div className="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface-variant text-xs font-bold border border-primary/10">
+            {user?.displayName?.[0] ?? '?'}
+          </div>
+        )}
+      </header>
+
       {/* ── Mobile Hamburger Menu (from Sidebar.jsx) ── */}
       {isMobileMenuOpen && (
         <MobileMenu
@@ -371,7 +426,7 @@ export default function App() {
       )}
 
       {/* ── Main content ── */}
-      <main ref={mainRef} className="flex-1 p-4 md:p-8 max-w-5xl mx-auto w-full pb-8 flex flex-col min-h-screen">
+      <main ref={mainRef} className="flex-1 md:ml-64 p-4 md:pt-20 md:px-6 pb-12 w-full flex flex-col min-h-screen">
 
         {/* Demo Mode banner */}
         {IS_DEMO_MODE && (
@@ -477,18 +532,18 @@ export default function App() {
 
         {/* ── Page views (lazy-loaded inside Suspense) ── */}
         <Suspense fallback={<PageLoader text={t('common.loadingPage')} />}>
-          {activeTab === 'dashboard'              && <DashboardView             summary={summary} transactions={transactions} investments={investments} categories={categories} investTypes={investTypes} setActiveTab={setActiveTab} fmt={fmt} privacyMode={privacyMode} darkMode={darkMode} />}
-          {activeTab === 'transactions'           && <TransactionView           transactions={transactions} categories={categories} wallets={wBals} investments={investments} userId={uid} appId={appId} fmt={fmt} />}
-          {activeTab === 'subscriptions'          && <SubscriptionView          subscriptions={subscriptions} wallets={wBals} userId={uid} appId={appId} fmt={fmt} />}
-          {activeTab === 'wallets'                && <WalletView               wallets={wBals} transactions={transactions} userId={uid} appId={appId} fmt={fmt} privacyMode={privacyMode} />}
-          {activeTab === 'investments'            && <InvestmentView            investments={investments} investTypes={investTypes} wallets={wBals} userId={uid} appId={appId} fmt={fmt} />}
-          {activeTab === 'education-fund'         && <EducationFundView         userId={uid} appId={appId} fmt={fmt} />}
-          {activeTab === 'income-diversification' && <IncomeDiversificationView userId={uid} appId={appId} fmt={fmt} transactions={transactions} />}
-          {activeTab === 'salary-slip-archive'    && <SalarySlipArchiveView     userId={uid} appId={appId} fmt={fmt} />}
-          {activeTab === 'salary-allocator'       && <SalaryAllocatorView       categories={categories} wallets={wBals} transactions={transactions} userId={uid} appId={appId} fmt={fmt} />}
-          {activeTab === 'zakat'                  && <ZakatView                 summary={summary} investments={investments} fmt={fmt} />}
-          {activeTab === 'savings-goals'          && <SavingsGoalView          savingsGoals={savingsGoals} wallets={wBals} userId={uid} appId={appId} fmt={fmt} />}
-          {activeTab === 'categories'             && <CategoryView              categories={categories} userId={uid} appId={appId} fmt={fmt} />}
+          {activeTab === 'dashboard'                                                           && <DashboardView             summary={summary} transactions={transactions} investments={investments} categories={categories} investTypes={investTypes} setActiveTab={setActiveTab} fmt={fmt} privacyMode={privacyMode} darkMode={darkMode} />}
+          {activeTab === 'transactions'                                                         && <TransactionView           transactions={transactions} categories={categories} wallets={wBals} investments={investments} userId={uid} appId={appId} fmt={fmt} />}
+          {activeTab === 'subscriptions'                                                        && <SubscriptionView          subscriptions={subscriptions} wallets={wBals} userId={uid} appId={appId} fmt={fmt} />}
+          {activeTab === 'wallets'                                                              && <WalletView               wallets={wBals} transactions={transactions} userId={uid} appId={appId} fmt={fmt} privacyMode={privacyMode} />}
+          {activeTab === 'investments'                                                          && <InvestmentView            investments={investments} investTypes={investTypes} wallets={wBals} userId={uid} appId={appId} fmt={fmt} />}
+          {activeTab === 'education-fund'                                                       && <EducationFundView         userId={uid} appId={appId} fmt={fmt} />}
+          {(activeTab === 'income-sources'       || activeTab === 'income-diversification')     && <IncomeDiversificationView userId={uid} appId={appId} fmt={fmt} transactions={transactions} />}
+          {(activeTab === 'salary-slips'         || activeTab === 'salary-slip-archive')        && <SalarySlipArchiveView     userId={uid} appId={appId} fmt={fmt} />}
+          {(activeTab === 'budget'               || activeTab === 'salary-allocator')           && <SalaryAllocatorView       categories={categories} wallets={wBals} transactions={transactions} userId={uid} appId={appId} fmt={fmt} />}
+          {activeTab === 'zakat'                                                                && <ZakatView                 summary={summary} investments={investments} fmt={fmt} />}
+          {activeTab === 'savings-goals'                                                        && <SavingsGoalView          savingsGoals={savingsGoals} wallets={wBals} userId={uid} appId={appId} fmt={fmt} />}
+          {activeTab === 'categories'                                                           && <CategoryView              categories={categories} userId={uid} appId={appId} fmt={fmt} />}
 
           {/* Modals */}
           {isTransactionModalOpen && (

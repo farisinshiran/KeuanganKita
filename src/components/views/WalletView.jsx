@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Plus, Save, X, Edit2, Trash2, Landmark, Smartphone, Banknote, CreditCard, Briefcase, TrendingUp } from 'lucide-react';
+﻿import React, { useState } from 'react';
 import { collection, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import Icon from '../ui/Icon.jsx';
 
 const WalletView = ({ wallets, transactions, userId, appId, fmt }) => {
   const [form, setForm] = useState({ id: null, name: '', type: 'bank', initialBalance: '', limit: '', icon: '' });
@@ -58,187 +58,216 @@ const WalletView = ({ wallets, transactions, userId, appId, fmt }) => {
     }).sort((a, b) => new Date(b.date) - new Date(a.date));
   };
 
+  const WALLET_CONFIG = {
+    bank:        { icon: 'account_balance',        label: 'Bank',         colorClass: 'text-primary' },
+    ewallet:     { icon: 'account_balance_wallet', label: 'E-Wallet',     colorClass: 'text-secondary' },
+    cash:        { icon: 'payments',               label: 'Tunai',        colorClass: 'text-tertiary' },
+    credit_card: { icon: 'credit_card',            label: 'Kartu Kredit', colorClass: 'text-error' },
+    paylater:    { icon: 'credit_score',           label: 'PayLater',     colorClass: 'text-error' },
+    rdn:         { icon: 'verified',               label: 'RDN',          colorClass: 'text-secondary' },
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-500">
+
+      {/* â”€â”€ Page header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Rekening & Kartu Kredit</h2>
-        <button onClick={() => { setIsFormOpen(!isFormOpen); setForm({ id: null, name: '', type: 'bank', initialBalance: '', limit: '', icon: '' }); }} className="bg-emerald-600 text-white px-4 py-2 rounded-lg flex gap-2 hover:bg-emerald-700 transition-colors">{isFormOpen ? <X size={18}/> : <Plus size={18}/>} <span>{isFormOpen ? 'Batal' : 'Tambah'}</span></button>
+        <h2 className="text-2xl font-bold text-on-surface">Rekening & Kartu Kredit</h2>
+        <button
+          onClick={() => { setIsFormOpen(!isFormOpen); setForm({ id: null, name: '', type: 'bank', initialBalance: '', limit: '', icon: '' }); }}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${isFormOpen ? 'border-2 border-primary text-primary hover:bg-primary/5' : 'bg-primary text-on-primary shadow-lg shadow-primary/20 hover:scale-[0.98] active:scale-95'}`}
+        >
+          <Icon name={isFormOpen ? 'close' : 'add'} size={18} />
+          {isFormOpen ? 'Batal' : 'Tambah Akun'}
+        </button>
       </div>
-      
+
+      {/* â”€â”€ Add / Edit Form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {isFormOpen && (
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end transition-colors duration-300 animate-in fade-in slide-in-from-top-4">
-        <div className="space-y-1 lg:col-span-1">
-           <label className="text-xs font-semibold text-gray-500 dark:text-gray-400">Tipe Akun</label>
-           <select value={form.type} onChange={e=>setForm({...form, type:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white dark:bg-gray-700 dark:text-white">
-             <option value="bank">Bank</option>
-             <option value="ewallet">E-Wallet</option>
-             <option value="cash">Tunai</option>
-             <option value="credit_card">Kartu Kredit</option>
-             <option value="paylater">PayLater (GoPay Later, Kredivo, dll.)</option>
-             <option value="rdn">RDN (Rekening Dana Nasabah)</option>
-           </select>
-        </div>
-        <div className="space-y-1 lg:col-span-1">
-           <label className="text-xs font-semibold text-gray-500 dark:text-gray-400">Icon (Emoji)</label>
-           <input value={form.icon} onChange={e=>setForm({...form, icon:e.target.value})} placeholder="Contoh: 💰" className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white dark:bg-gray-700 dark:text-white text-center text-lg"/>
-        </div>
-        <div className="space-y-1 lg:col-span-2">
-           <label className="text-xs font-semibold text-gray-500 dark:text-gray-400">Nama Akun</label>
-           <input value={form.name} onChange={e=>setForm({...form, name:e.target.value})} placeholder="Contoh: BCA / Kartu Kredit" className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white dark:bg-gray-700 dark:text-white"/>
-        </div>
-        <div className="space-y-1 lg:col-span-1">
-           <label className="text-xs font-semibold text-gray-500 dark:text-gray-400">Saldo Awal (Rp)</label>
-           <input type="number" value={form.initialBalance} onChange={e=>setForm({...form, initialBalance:e.target.value})} placeholder="0" className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white dark:bg-gray-700 dark:text-white"/>
-        </div>
-        {form.type === 'credit_card' && (
-          <div className="space-y-1 lg:col-span-1">
-             <label className="text-xs font-semibold text-gray-500 dark:text-gray-400">Limit Pagu (Rp)</label>
-             <input type="number" value={form.limit} onChange={e=>setForm({...form, limit:e.target.value})} placeholder="Limit Kredit" className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white dark:bg-gray-700 dark:text-white"/>
+        <form onSubmit={handleSubmit} className="bg-surface-container-low p-6 rounded-2xl animate-in fade-in slide-in-from-top-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+          <div className="space-y-1.5 lg:col-span-1">
+            <label className="text-xs font-semibold text-on-surface-variant">Tipe Akun</label>
+            <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value })} className="w-full p-2.5 bg-surface-container-lowest border-none rounded-xl focus:ring-1 focus:ring-primary/20 outline-none text-on-surface text-sm">
+              <option value="bank">Bank</option>
+              <option value="ewallet">E-Wallet</option>
+              <option value="cash">Tunai</option>
+              <option value="credit_card">Kartu Kredit</option>
+              <option value="paylater">PayLater</option>
+              <option value="rdn">RDN</option>
+            </select>
           </div>
-        )}
-        <button type="submit" className="md:col-span-2 lg:col-span-1 bg-emerald-600 text-white px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 hover:bg-emerald-700 transition-colors h-[46px]"><Save size={18}/> {form.id ? 'Simpan' : 'Tambah'}</button>
-      </form>
+          <div className="space-y-1.5 lg:col-span-1">
+            <label className="text-xs font-semibold text-on-surface-variant">Icon (Emoji)</label>
+            <input value={form.icon} onChange={e => setForm({ ...form, icon: e.target.value })} placeholder="ðŸ’°" className="w-full p-2.5 bg-surface-container-lowest border-none rounded-xl focus:ring-1 focus:ring-primary/20 outline-none text-center text-lg text-on-surface" />
+          </div>
+          <div className="space-y-1.5 lg:col-span-2">
+            <label className="text-xs font-semibold text-on-surface-variant">Nama Akun</label>
+            <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Contoh: BCA / GoPay" className="w-full p-2.5 bg-surface-container-lowest border-none rounded-xl focus:ring-1 focus:ring-primary/20 outline-none text-on-surface" />
+          </div>
+          <div className="space-y-1.5 lg:col-span-1">
+            <label className="text-xs font-semibold text-on-surface-variant">Saldo Awal (Rp)</label>
+            <input type="number" value={form.initialBalance} onChange={e => setForm({ ...form, initialBalance: e.target.value })} placeholder="0" className="w-full p-2.5 bg-surface-container-lowest border-none rounded-xl focus:ring-1 focus:ring-primary/20 outline-none text-on-surface" />
+          </div>
+          {form.type === 'credit_card' && (
+            <div className="space-y-1.5 lg:col-span-1">
+              <label className="text-xs font-semibold text-on-surface-variant">Limit Pagu (Rp)</label>
+              <input type="number" value={form.limit} onChange={e => setForm({ ...form, limit: e.target.value })} placeholder="Limit Kredit" className="w-full p-2.5 bg-surface-container-lowest border-none rounded-xl focus:ring-1 focus:ring-primary/20 outline-none text-on-surface" />
+            </div>
+          )}
+          <button type="submit" className="md:col-span-2 lg:col-span-1 bg-primary text-on-primary px-6 py-2.5 rounded-xl flex items-center justify-center gap-2 font-semibold shadow-lg shadow-primary/20 hover:scale-[0.98] active:scale-95 transition-all h-[46px]">
+            <Icon name="save" size={18} /> {form.id ? 'Simpan' : 'Tambah'}
+          </button>
+        </form>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {wallets.map(w => (
-          <div key={w.id} className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-between duration-300 group relative cursor-pointer hover:shadow-md hover:scale-[1.01] transition-all" onClick={() => handleWalletClick(w)}>
-             <div className="flex justify-between items-start">
-               <div className="flex items-center gap-3">
-                 <div className="text-3xl p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                   {w.icon || (
-                     w.type === 'bank' ? <Landmark size={24} className="text-emerald-600 dark:text-emerald-400"/> :
-                     w.type === 'ewallet' ? <Smartphone size={24} className="text-emerald-600 dark:text-emerald-400"/> :
-                     w.type === 'cash' ? <Banknote size={24} className="text-emerald-600 dark:text-emerald-400"/> :
-                     w.type === 'credit_card' ? <CreditCard size={24} className="text-red-500"/> :
-                     w.type === 'paylater' ? <CreditCard size={24} className="text-orange-500"/> :
-                     <Briefcase size={24} className="text-amber-600 dark:text-amber-400"/>
-                   )}
-                 </div>
-                 <div>
-                   <h3 className="font-bold text-gray-800 dark:text-gray-100">{w.name}</h3>
-                   <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">{w.type.replace('_', ' ')}</p>
-                 </div>
-               </div>
-               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity absolute right-4 top-4 bg-white dark:bg-gray-800 p-1 rounded-lg shadow-sm">
-                  <button onClick={(e)=>{e.stopPropagation();handleEdit(w)}} className="text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 p-1 rounded"><Edit2 size={16}/></button>
-                  <button onClick={(e)=>{e.stopPropagation();handleDelete(w.id)}} className="text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 p-1 rounded"><Trash2 size={16}/></button>
-               </div>
-             </div>
-             <div className="mt-4 pt-4 border-t border-dashed dark:border-gray-700">
-               <div className="flex justify-between items-end mb-1">
-                 <div>
-                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{w.type === 'credit_card' || w.type === 'paylater' ? 'Total Tagihan' : 'Saldo Saat Ini'}</p>
-                   <p className={`text-xl font-bold ${w.type === 'credit_card' || w.type === 'paylater' ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                     {w.type === 'credit_card' || w.type === 'paylater' ? fmt(Math.abs(w.currentBalance)) : fmt(w.currentBalance)}
-                   </p>
-                 </div>
-                 {w.initialBalance !== 0 && <span className="text-[10px] text-gray-400">Awal: {fmt(w.initialBalance)}</span>}
-               </div>
-               {w.type === 'credit_card' && w.limit > 0 && (
-                 <div className="mt-2 text-xs">
-                   <div className="flex justify-between mb-1 text-gray-500 dark:text-gray-400">
-                     <span>Terpakai {((Math.abs(w.currentBalance)/w.limit)*100).toFixed(0)}%</span>
-                     <span>Limit: {fmt(w.limit)}</span>
-                   </div>
-                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                     <div className="bg-red-500 h-1.5 rounded-full transition-all" style={{width: `${Math.min((Math.abs(w.currentBalance)/w.limit)*100, 100)}%`}}></div>
-                   </div>
-                 </div>
-               )}
-             </div>
-          </div>
-        ))}
-      </div>
+      {/* â”€â”€ Wallet Grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {wallets.length === 0 ? (
+        <div className="text-center py-16 border-2 border-dashed border-outline-variant/30 rounded-2xl text-on-surface-variant">
+          <Icon name="account_balance_wallet" size={48} className="mx-auto opacity-30 mb-3" />
+          <p className="font-medium">Belum ada akun. Tambahkan akun pertama Anda.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {wallets.map(w => {
+            const cfg = WALLET_CONFIG[w.type] || WALLET_CONFIG.bank;
+            const isDebt = w.type === 'credit_card' || w.type === 'paylater';
+            return (
+              <div
+                key={w.id}
+                className="bg-surface-container-low p-5 rounded-2xl hover:ring-1 hover:ring-primary/20 transition-all cursor-pointer group relative"
+                onClick={() => handleWalletClick(w)}
+              >
+                {/* Edit/Delete actions */}
+                <div className="absolute right-4 top-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-surface-container-low rounded-xl p-1 shadow-sm">
+                  <button onClick={e => { e.stopPropagation(); handleEdit(w); }} className="p-1.5 rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors">
+                    <Icon name="edit" size={16} />
+                  </button>
+                  <button onClick={e => { e.stopPropagation(); handleDelete(w.id); }} className="p-1.5 rounded-lg hover:bg-error-container text-on-surface-variant hover:text-error transition-colors">
+                    <Icon name="delete" size={16} />
+                  </button>
+                </div>
 
-      {/* Transaction List Modal */}
-      {isTransactionModalOpen && selectedWallet && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in" onClick={() => setIsTransactionModalOpen(false)}>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4" onClick={(e) => e.stopPropagation()}>
-            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-6 text-white">
-              <div className="flex justify-between items-start">
-                <div className="flex items-center gap-3">
-                  <div className="text-4xl p-3 bg-white/20 rounded-xl">
-                    {selectedWallet.icon || (
-                      selectedWallet.type === 'bank' ? <Landmark size={28}/> :
-                      selectedWallet.type === 'ewallet' ? <Smartphone size={28}/> :
-                      selectedWallet.type === 'cash' ? <Banknote size={28}/> :
-                      selectedWallet.type === 'credit_card' ? <CreditCard size={28}/> :
-                      selectedWallet.type === 'paylater' ? <CreditCard size={28} className="text-orange-400"/> :
-                      <Briefcase size={28}/>
+                {/* Wallet type badge + name */}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`p-2.5 rounded-2xl bg-surface-container-lowest`}>
+                    {w.icon ? (
+                      <span className="text-2xl leading-none">{w.icon}</span>
+                    ) : (
+                      <Icon name={cfg.icon} size={22} className={cfg.colorClass} />
                     )}
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold">{selectedWallet.name}</h2>
-                    <p className="text-emerald-100 text-sm uppercase tracking-wider">{selectedWallet.type.replace('_', ' ')}</p>
+                    <h3 className="font-bold text-on-surface">{w.name}</h3>
+                    <p className="text-xs text-on-surface-variant uppercase tracking-wider font-medium">{cfg.label}</p>
                   </div>
                 </div>
-                <button onClick={() => setIsTransactionModalOpen(false)} className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors">
-                  <X size={24}/>
+
+                {/* Balance */}
+                <div className="pt-4 border-t border-outline-variant/20">
+                  <p className="text-xs text-on-surface-variant mb-1">{isDebt ? 'Total Tagihan' : 'Saldo Saat Ini'}</p>
+                  <p className={`text-2xl font-bold ${isDebt ? 'text-error' : 'text-on-surface'}`}>
+                    {isDebt ? fmt(Math.abs(w.currentBalance)) : fmt(w.currentBalance)}
+                  </p>
+                  {w.initialBalance !== 0 && (
+                    <p className="text-xs text-on-surface-variant mt-1">Awal: {fmt(w.initialBalance)}</p>
+                  )}
+
+                  {/* Credit card usage bar */}
+                  {w.type === 'credit_card' && w.limit > 0 && (
+                    <div className="mt-3">
+                      <div className="flex justify-between text-xs text-on-surface-variant mb-1.5">
+                        <span>Terpakai {((Math.abs(w.currentBalance) / w.limit) * 100).toFixed(0)}%</span>
+                        <span>Limit: {fmt(w.limit)}</span>
+                      </div>
+                      <div className="w-full bg-error-container/30 rounded-full h-1.5">
+                        <div className="bg-error h-1.5 rounded-full transition-all" style={{ width: `${Math.min((Math.abs(w.currentBalance) / w.limit) * 100, 100)}%` }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* â”€â”€ Transaction Detail Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {isTransactionModalOpen && selectedWallet && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in" onClick={() => setIsTransactionModalOpen(false)}>
+          <div className="bg-surface-container-lowest rounded-3xl shadow-2xl max-w-3xl w-full max-h-[85vh] overflow-hidden animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
+
+            {/* Modal header */}
+            <div className="bg-primary text-on-primary p-6">
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-white/20 rounded-2xl">
+                    {selectedWallet.icon ? (
+                      <span className="text-2xl">{selectedWallet.icon}</span>
+                    ) : (
+                      <Icon name={(WALLET_CONFIG[selectedWallet.type] || WALLET_CONFIG.bank).icon} size={24} />
+                    )}
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold">{selectedWallet.name}</h2>
+                    <p className="text-sm opacity-70 uppercase tracking-wider">{(WALLET_CONFIG[selectedWallet.type] || WALLET_CONFIG.bank).label}</p>
+                  </div>
+                </div>
+                <button onClick={() => setIsTransactionModalOpen(false)} className="p-2 rounded-xl hover:bg-white/20 transition-colors">
+                  <Icon name="close" size={22} />
                 </button>
               </div>
-              <div className="mt-4 flex items-baseline gap-2">
-                <span className="text-emerald-100 text-sm">{selectedWallet.type === 'credit_card' ? 'Total Tagihan' : 'Saldo Saat Ini'}:</span>
-                <span className="text-3xl font-bold">{selectedWallet.type === 'credit_card' ? fmt(Math.abs(selectedWallet.currentBalance)) : fmt(selectedWallet.currentBalance)}</span>
+              <div className="mt-4">
+                <p className="text-sm opacity-70 mb-1">{selectedWallet.type === 'credit_card' ? 'Total Tagihan' : 'Saldo Saat Ini'}</p>
+                <p className="text-3xl font-bold">{selectedWallet.type === 'credit_card' ? fmt(Math.abs(selectedWallet.currentBalance)) : fmt(selectedWallet.currentBalance)}</p>
               </div>
             </div>
 
-            <div className="p-6 overflow-y-auto" style={{maxHeight: 'calc(85vh - 180px)'}}>
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
-                <TrendingUp size={20} className="text-emerald-600"/>
+            {/* Transaction list */}
+            <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(85vh - 200px)' }}>
+              <h3 className="font-semibold text-on-surface mb-4 flex items-center gap-2">
+                <Icon name="receipt_long" size={18} className="text-primary" />
                 Riwayat Transaksi ({getWalletTransactions().length})
               </h3>
-              
+
               {getWalletTransactions().length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="text-gray-400 mb-2">
-                    <TrendingUp size={48} className="mx-auto opacity-30"/>
-                  </div>
-                  <p className="text-gray-500 dark:text-gray-400">Belum ada transaksi untuk akun ini</p>
+                <div className="text-center py-12 text-on-surface-variant">
+                  <Icon name="receipt" size={48} className="mx-auto opacity-30 mb-3" />
+                  <p>Belum ada transaksi untuk akun ini</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="text-left py-3 px-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tanggal</th>
-                        <th className="text-left py-3 px-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Kategori</th>
-                        <th className="text-left py-3 px-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Catatan</th>
-                        <th className="text-right py-3 px-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Jumlah</th>
+                      <tr className="bg-surface-container-low">
+                        <th className="text-left py-3 px-3 text-xs font-semibold text-on-surface-variant uppercase tracking-wider first:rounded-l-xl">Tanggal</th>
+                        <th className="text-left py-3 px-3 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Kategori</th>
+                        <th className="text-left py-3 px-3 text-xs font-semibold text-on-surface-variant uppercase tracking-wider hidden sm:table-cell">Catatan</th>
+                        <th className="text-right py-3 px-3 text-xs font-semibold text-on-surface-variant uppercase tracking-wider last:rounded-r-xl">Jumlah</th>
                       </tr>
                     </thead>
                     <tbody>
                       {getWalletTransactions().map((t, idx) => {
                         const isIncome = t.type === 'income';
-                        const isExpense = t.type === 'expense';
                         const isInvestmentSale = t.type === 'investment_sale';
                         const isTransfer = t.type === 'transfer';
                         const isTransferOut = isTransfer && t.sourceWalletId === selectedWallet.id;
                         const isTransferIn = isTransfer && t.targetWalletId === selectedWallet.id;
-                        
+                        const isPositive = isIncome || isTransferIn || isInvestmentSale;
+                        const isNegative = t.type === 'expense' || isTransferOut;
+
                         return (
-                          <tr key={t.id || idx} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                            <td className="py-3 px-2 text-sm text-gray-600 dark:text-gray-300">
+                          <tr key={t.id || idx} className="border-b border-outline-variant/10 hover:bg-surface-container-high/40 transition-colors">
+                            <td className="py-3 px-3 text-sm text-on-surface-variant">
                               {new Date(t.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                             </td>
-                            <td className="py-3 px-2">
-                              <span className="text-xs font-semibold px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                            <td className="py-3 px-3">
+                              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${isPositive ? 'bg-secondary-container text-on-secondary-container' : isNegative ? 'bg-error-container text-on-error-container' : 'bg-surface-container text-on-surface-variant'}`}>
                                 {isTransfer ? (isTransferOut ? 'Transfer Keluar' : 'Transfer Masuk') : (isInvestmentSale ? 'Penjualan Aset' : (t.category || 'Lainnya'))}
                               </span>
                             </td>
-                            <td className="py-3 px-2 text-sm text-gray-800 dark:text-gray-200">
-                              {t.note || '-'}
-                            </td>
-                            <td className="py-3 px-2 text-right">
-                              <span className={`font-bold text-sm ${
-                                isIncome || isTransferIn || isInvestmentSale ? 'text-emerald-600 dark:text-emerald-400' :
-                                isExpense || isTransferOut ? 'text-red-600 dark:text-red-400' :
-                                'text-gray-600 dark:text-gray-400'
-                              }`}>
-                                {(isIncome || isTransferIn || isInvestmentSale) && '+'}
-                                {(isExpense || isTransferOut) && '-'}
-                                {fmt(t.amount)}
-                              </span>
+                            <td className="py-3 px-3 text-sm text-on-surface hidden sm:table-cell">{t.note || '-'}</td>
+                            <td className={`py-3 px-3 text-right font-bold text-sm ${isPositive ? 'text-secondary' : isNegative ? 'text-error' : 'text-on-surface-variant'}`}>
+                              {isPositive && '+'}{isNegative && '-'}{fmt(t.amount)}
                             </td>
                           </tr>
                         );

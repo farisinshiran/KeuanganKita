@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bot, X, AlertTriangle, RefreshCw, CheckCircle, Trash2 } from 'lucide-react';
+import Icon from '../ui/Icon.jsx';
 import {
   getFirestore, collection, addDoc, doc, serverTimestamp, setDoc, getDoc
 } from 'firebase/firestore';
@@ -257,16 +257,16 @@ const QuickAddModal = ({ isOpen, onClose, categories, wallets, userId, appId, fm
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center animate-in fade-in duration-200" onClick={handleClose}>
-      <div className="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-6xl sm:w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-300" onClick={(e) => e.stopPropagation()}>
-        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700 p-4 sm:p-6 flex justify-between items-center z-10">
-          <h2 className="text-base sm:text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-            <Bot size={20} className="text-emerald-600 dark:text-emerald-400 sm:w-6 sm:h-6" />
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center animate-in fade-in duration-200" onClick={handleClose}>
+      <div className="bg-surface-container-lowest rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-6xl sm:w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-300" onClick={(e) => e.stopPropagation()}>
+        <div className="sticky top-0 bg-surface-container-lowest border-b border-outline-variant/20 p-4 sm:p-6 flex justify-between items-center z-10">
+          <h2 className="text-base sm:text-xl font-bold text-on-surface flex items-center gap-2">
+            <Icon name="smart_toy" size={20} className="text-primary" fill={1} />
             <span className="hidden sm:inline">Quick Add - AI Receipt Scanner</span>
             <span className="sm:hidden">Quick Add AI</span>
           </h2>
-          <button onClick={handleClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors touch-manipulation" aria-label="Close">
-            <X size={20} className="text-gray-500 dark:text-gray-400" />
+          <button onClick={handleClose} className="p-2 hover:bg-surface-container rounded-xl transition-colors touch-manipulation" aria-label="Close">
+            <Icon name="close" size={20} className="text-on-surface-variant" />
           </button>
         </div>
 
@@ -274,20 +274,20 @@ const QuickAddModal = ({ isOpen, onClose, categories, wallets, userId, appId, fm
           {/* Loading State */}
           {isLoadingApiKey && (
             <div className="flex items-center justify-center gap-3 py-4">
-              <RefreshCw size={20} className="animate-spin text-emerald-600" />
-              <span className="text-sm text-gray-600 dark:text-gray-400">Memuat API Key...</span>
+              <Icon name="refresh" size={20} className="animate-spin text-primary" />
+              <span className="text-sm text-on-surface-variant">Memuat API Key...</span>
             </div>
           )}
 
           {/* API Key Section */}
           {!isLoadingApiKey && showApiKeyInput && (
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+            <div className="bg-tertiary-container/30 border border-tertiary/20 rounded-2xl p-4">
               <div className="flex items-start gap-3">
-                <AlertTriangle className="text-yellow-600 dark:text-yellow-400 mt-0.5" size={20} />
+                <Icon name="warning" size={20} className="text-tertiary mt-0.5" fill={1} />
                 <div className="flex-1 space-y-3">
                   <div>
-                    <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-1">Setup Google Cloud Vision API</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <h3 className="font-semibold text-on-surface mb-1">Setup Google Cloud Vision API</h3>
+                    <p className="text-sm text-on-surface-variant">
                       Masukkan API Key Anda untuk menggunakan fitur AI Scanner. API Key akan tersimpan di akun Anda dan tersinkronisasi di semua device.
                     </p>
                   </div>
@@ -297,7 +297,7 @@ const QuickAddModal = ({ isOpen, onClose, categories, wallets, userId, appId, fm
                       value={apiKey}
                       onChange={(e) => setApiKey(e.target.value)}
                       placeholder="Paste API Key di sini..."
-                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 dark:text-white text-sm"
+                      className="flex-1 px-3 py-2 bg-surface-container-low border-none rounded-xl focus:ring-1 focus:ring-primary/20 outline-none text-on-surface text-sm"
                       disabled={isProcessing}
                     />
                     <button
@@ -310,7 +310,7 @@ const QuickAddModal = ({ isOpen, onClose, categories, wallets, userId, appId, fm
                         }
                       }}
                       disabled={!apiKey.trim() || isProcessing}
-                      className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-primary text-on-primary rounded-xl text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isProcessing ? 'Menyimpan...' : 'Simpan'}
                     </button>
@@ -321,16 +321,16 @@ const QuickAddModal = ({ isOpen, onClose, categories, wallets, userId, appId, fm
           )}
 
           {!isLoadingApiKey && !showApiKeyInput && apiKey && (
-            <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3">
+            <div className="bg-primary/5 border border-primary/20 rounded-2xl p-3">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-300">
-                  <CheckCircle size={16} className="text-emerald-600 dark:text-emerald-400" />
+                <div className="flex items-center gap-2 text-sm text-primary">
+                  <Icon name="check_circle" size={16} className="text-primary" fill={1} />
                   <span className="font-medium">API Key tersimpan di akun Anda</span>
-                  <span className="text-xs text-emerald-600 dark:text-emerald-500">(sync semua device)</span>
+                  <span className="text-xs text-on-surface-variant">(sync semua device)</span>
                 </div>
                 <button
                   onClick={() => setShowApiKeyInput(true)}
-                  className="text-sm text-emerald-600 dark:text-emerald-400 hover:underline font-medium"
+                  className="text-sm text-primary hover:underline font-medium"
                 >
                   Ubah
                 </button>
@@ -340,7 +340,7 @@ const QuickAddModal = ({ isOpen, onClose, categories, wallets, userId, appId, fm
 
           {/* Upload Section */}
           {!isLoadingApiKey && (
-          <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-4 sm:p-8 text-center">
+          <div className="border-2 border-dashed border-outline-variant rounded-2xl p-4 sm:p-8 text-center">
             <input
               ref={fileInputRef}
               type="file"
@@ -353,16 +353,16 @@ const QuickAddModal = ({ isOpen, onClose, categories, wallets, userId, appId, fm
             {!imagePreview ? (
               <label htmlFor="receipt-upload" className="cursor-pointer block">
                 <div className="flex flex-col items-center gap-3">
-                  <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center">
-                    <Bot size={32} className="text-emerald-600 dark:text-emerald-400" />
+                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                    <Icon name="smart_toy" size={32} className="text-primary" fill={1} />
                   </div>
                   <div>
-                    <p className="text-lg font-semibold text-gray-700 dark:text-gray-300">Upload Screenshot / Foto Struk</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Tap untuk memilih gambar</p>
+                    <p className="text-lg font-semibold text-on-surface">Upload Screenshot / Foto Struk</p>
+                    <p className="text-sm text-on-surface-variant mt-1">Tap untuk memilih gambar</p>
 
-                    <div className="mt-4 text-xs text-left bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                      <p className="font-semibold text-blue-700 dark:text-blue-400 mb-2">💡 Tips untuk hasil terbaik:</p>
-                      <ul className="space-y-1 text-blue-600 dark:text-blue-300">
+                    <div className="mt-4 text-xs text-left bg-primary/5 border border-primary/10 rounded-2xl p-3">
+                      <p className="font-semibold text-primary mb-2">💡 Tips untuk hasil terbaik:</p>
+                      <ul className="space-y-1 text-on-surface-variant">
                         <li>• <strong>Screenshot histori transaksi lengkap</strong> (tanggal, deskripsi, nominal)</li>
                         <li>• Pastikan text <strong>jelas & tidak blur</strong></li>
                         <li>• Hindari <strong>refleksi cahaya</strong> pada layar</li>
@@ -371,7 +371,7 @@ const QuickAddModal = ({ isOpen, onClose, categories, wallets, userId, appId, fm
                       </ul>
                     </div>
                   </div>
-                  <div className="mt-3 px-6 py-3 sm:py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium active:bg-emerald-800 transition-colors min-h-[48px] flex items-center justify-center touch-manipulation">
+                  <div className="mt-3 px-6 py-3 sm:py-2.5 bg-primary text-on-primary rounded-xl font-medium active:scale-95 transition-colors min-h-[48px] flex items-center justify-center touch-manipulation">
                     Pilih Gambar
                   </div>
                 </div>
@@ -382,23 +382,23 @@ const QuickAddModal = ({ isOpen, onClose, categories, wallets, userId, appId, fm
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center">
                   <button
                     onClick={handleReset}
-                    className="px-4 py-3 sm:py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium touch-manipulation min-h-[48px]"
+                    className="px-4 py-3 sm:py-2 border border-outline text-on-surface rounded-xl hover:bg-surface-container font-medium touch-manipulation min-h-[48px]"
                   >
                     Ganti Gambar
                   </button>
                   <button
                     onClick={handleAnalyze}
                     disabled={isProcessing}
-                    className="px-6 py-3 sm:py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 touch-manipulation min-h-[48px]"
+                    className="px-6 py-3 sm:py-2 bg-primary text-on-primary rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 touch-manipulation min-h-[48px] shadow-lg shadow-primary/20 hover:scale-[0.98] active:scale-95 transition-all"
                   >
                     {isProcessing ? (
                       <>
-                        <RefreshCw size={18} className="animate-spin" />
+                        <Icon name="refresh" size={18} className="animate-spin" />
                         Menganalisis...
                       </>
                     ) : (
                       <>
-                        <Bot size={18} />
+                        <Icon name="smart_toy" size={18} fill={1} />
                         Analisis dengan AI
                       </>
                     )}
@@ -413,65 +413,64 @@ const QuickAddModal = ({ isOpen, onClose, categories, wallets, userId, appId, fm
           {!isLoadingApiKey && detectedTransactions.length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-base sm:text-lg font-bold text-gray-800 dark:text-gray-100">
+                <h3 className="text-base sm:text-lg font-bold text-on-surface">
                   Transaksi Terdeteksi ({detectedTransactions.filter(t => t.selected).length} dipilih)
                 </h3>
                 <button
                   onClick={() => setDetectedTransactions(prev => prev.map(t => ({ ...t, selected: !prev[0].selected })))}
-                  className="text-xs sm:text-sm text-emerald-600 hover:underline min-h-[48px] px-2 touch-manipulation"
+                  className="text-xs sm:text-sm text-primary hover:underline min-h-[48px] px-2 touch-manipulation"
                 >
                   {detectedTransactions[0]?.selected ? 'Unselect All' : 'Select All'}
                 </button>
               </div>
 
-              {/* Desktop Table View */}
-              <div className="hidden md:block overflow-x-auto border dark:border-gray-700 rounded-lg">
+              <div className="hidden md:block overflow-x-auto border border-outline-variant/20 rounded-2xl">
                 <table className="w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-700/50">
+                  <thead className="bg-surface-container-low">
                     <tr>
                       <th className="px-4 py-3 text-left">
                         <input type="checkbox" checked={detectedTransactions.every(t => t.selected)} onChange={() => setDetectedTransactions(prev => prev.map(t => ({ ...t, selected: !prev.every(x => x.selected) })))} className="rounded" />
                       </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Nominal</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Kategori</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Akun</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Tanggal</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Catatan</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-on-surface-variant">Nominal</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-on-surface-variant">Kategori</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-on-surface-variant">Akun</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-on-surface-variant">Tanggal</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-on-surface-variant">Catatan</th>
                       <th className="px-4 py-3"></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y dark:divide-gray-700">
+                  <tbody className="divide-y divide-outline-variant/10">
                     {detectedTransactions.map((t) => (
-                      <tr key={t.id} className={`${t.selected ? 'bg-emerald-50/50 dark:bg-emerald-900/10' : 'bg-white dark:bg-gray-800'}`}>
+                      <tr key={t.id} className={`${t.selected ? 'bg-primary/5' : 'bg-surface-container-lowest'}`}>
                         <td className="px-4 py-3">
                           <input type="checkbox" checked={t.selected} onChange={() => handleToggleSelect(t.id)} className="rounded" />
                         </td>
                         <td className="px-4 py-3">
-                          <input type="number" value={t.amount} onChange={(e) => handleUpdateTransaction(t.id, 'amount', e.target.value)} className="w-32 px-2 py-1 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white text-sm" />
+                          <input type="number" value={t.amount} onChange={(e) => handleUpdateTransaction(t.id, 'amount', e.target.value)} className="w-32 px-2 py-1 bg-surface-container-low border-none rounded-lg text-on-surface text-sm outline-none focus:ring-1 focus:ring-primary/20" />
                         </td>
                         <td className="px-4 py-3">
-                          <select value={t.category} onChange={(e) => handleUpdateTransaction(t.id, 'category', e.target.value)} className="w-full px-2 py-1 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white text-sm">
+                          <select value={t.category} onChange={(e) => handleUpdateTransaction(t.id, 'category', e.target.value)} className="w-full px-2 py-1 bg-surface-container-low border-none rounded-lg text-on-surface text-sm outline-none focus:ring-1 focus:ring-primary/20">
                             {categories.expense.map((cat) => (
                               <option key={cat} value={cat}>{cat}</option>
                             ))}
                           </select>
                         </td>
                         <td className="px-4 py-3">
-                          <select value={t.walletId} onChange={(e) => handleUpdateTransaction(t.id, 'walletId', e.target.value)} className="w-full px-2 py-1 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white text-sm">
+                          <select value={t.walletId} onChange={(e) => handleUpdateTransaction(t.id, 'walletId', e.target.value)} className="w-full px-2 py-1 bg-surface-container-low border-none rounded-lg text-on-surface text-sm outline-none focus:ring-1 focus:ring-primary/20">
                             {wallets.map((w) => (
                               <option key={w.id} value={w.id}>{w.icon} {w.name}</option>
                             ))}
                           </select>
                         </td>
                         <td className="px-4 py-3">
-                          <input type="date" value={formatDateInput(t.date)} onChange={(e) => handleUpdateTransaction(t.id, 'date', new Date(e.target.value))} className="w-full px-2 py-1 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white text-sm" />
+                          <input type="date" value={formatDateInput(t.date)} onChange={(e) => handleUpdateTransaction(t.id, 'date', new Date(e.target.value))} className="w-full px-2 py-1 bg-surface-container-low border-none rounded-lg text-on-surface text-sm outline-none focus:ring-1 focus:ring-primary/20" />
                         </td>
                         <td className="px-4 py-3">
-                          <input type="text" value={t.note} onChange={(e) => handleUpdateTransaction(t.id, 'note', e.target.value)} className="w-full px-2 py-1 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white text-sm" placeholder="Catatan..." />
+                          <input type="text" value={t.note} onChange={(e) => handleUpdateTransaction(t.id, 'note', e.target.value)} className="w-full px-2 py-1 bg-surface-container-low border-none rounded-lg text-on-surface text-sm outline-none focus:ring-1 focus:ring-primary/20" placeholder="Catatan..." />
                         </td>
                         <td className="px-4 py-3">
-                          <button onClick={() => handleDeleteTransaction(t.id)} className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded">
-                            <Trash2 size={16} />
+                          <button onClick={() => handleDeleteTransaction(t.id)} className="p-1 text-error hover:bg-error-container/30 rounded-lg">
+                            <Icon name="delete" size={16} />
                           </button>
                         </td>
                       </tr>
@@ -480,55 +479,54 @@ const QuickAddModal = ({ isOpen, onClose, categories, wallets, userId, appId, fm
                 </table>
               </div>
 
-              {/* Mobile Card View */}
               <div className="md:hidden space-y-3">
                 {detectedTransactions.map((t) => (
                   <div
                     key={t.id}
-                    className={`border dark:border-gray-700 rounded-lg p-4 space-y-3 ${
-                      t.selected ? 'bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-300 dark:border-emerald-700' : 'bg-white dark:bg-gray-800'
+                    className={`border rounded-2xl p-4 space-y-3 ${
+                      t.selected ? 'bg-primary/5 border-primary/20' : 'bg-surface-container-lowest border-outline-variant/20'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
                         <input type="checkbox" checked={t.selected} onChange={() => handleToggleSelect(t.id)} className="rounded min-w-[24px] min-h-[24px]" />
-                        <div className="text-lg font-bold text-gray-800 dark:text-gray-100">
+                        <div className="text-lg font-bold text-on-surface">
                           Rp {Number(t.amount).toLocaleString('id-ID')}
                         </div>
                       </div>
-                      <button onClick={() => handleDeleteTransaction(t.id)} className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded min-h-[48px] min-w-[48px] touch-manipulation flex items-center justify-center">
-                        <Trash2 size={18} />
+                      <button onClick={() => handleDeleteTransaction(t.id)} className="p-2 text-error hover:bg-error-container/30 rounded-xl min-h-[48px] min-w-[48px] touch-manipulation flex items-center justify-center">
+                        <Icon name="delete" size={18} />
                       </button>
                     </div>
 
                     <div className="space-y-2">
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Nominal</label>
-                        <input type="number" value={t.amount} onChange={(e) => handleUpdateTransaction(t.id, 'amount', e.target.value)} className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white text-sm min-h-[48px] touch-manipulation" />
+                        <label className="block text-xs font-medium text-on-surface-variant mb-1">Nominal</label>
+                        <input type="number" value={t.amount} onChange={(e) => handleUpdateTransaction(t.id, 'amount', e.target.value)} className="w-full px-3 py-2.5 bg-surface-container-low border-none rounded-xl text-on-surface text-sm outline-none focus:ring-1 focus:ring-primary/20 min-h-[48px] touch-manipulation" />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Kategori</label>
-                        <select value={t.category} onChange={(e) => handleUpdateTransaction(t.id, 'category', e.target.value)} className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white text-sm min-h-[48px] touch-manipulation">
+                        <label className="block text-xs font-medium text-on-surface-variant mb-1">Kategori</label>
+                        <select value={t.category} onChange={(e) => handleUpdateTransaction(t.id, 'category', e.target.value)} className="w-full px-3 py-2.5 bg-surface-container-low border-none rounded-xl text-on-surface text-sm outline-none focus:ring-1 focus:ring-primary/20 min-h-[48px] touch-manipulation">
                           {categories.expense.map((cat) => (
                             <option key={cat} value={cat}>{cat}</option>
                           ))}
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Akun</label>
-                        <select value={t.walletId} onChange={(e) => handleUpdateTransaction(t.id, 'walletId', e.target.value)} className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white text-sm min-h-[48px] touch-manipulation">
+                        <label className="block text-xs font-medium text-on-surface-variant mb-1">Akun</label>
+                        <select value={t.walletId} onChange={(e) => handleUpdateTransaction(t.id, 'walletId', e.target.value)} className="w-full px-3 py-2.5 bg-surface-container-low border-none rounded-xl text-on-surface text-sm outline-none focus:ring-1 focus:ring-primary/20 min-h-[48px] touch-manipulation">
                           {wallets.map((w) => (
                             <option key={w.id} value={w.id}>{w.icon} {w.name}</option>
                           ))}
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Tanggal</label>
-                        <input type="date" value={formatDateInput(t.date)} onChange={(e) => handleUpdateTransaction(t.id, 'date', new Date(e.target.value))} className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white text-sm min-h-[48px] touch-manipulation" />
+                        <label className="block text-xs font-medium text-on-surface-variant mb-1">Tanggal</label>
+                        <input type="date" value={formatDateInput(t.date)} onChange={(e) => handleUpdateTransaction(t.id, 'date', new Date(e.target.value))} className="w-full px-3 py-2.5 bg-surface-container-low border-none rounded-xl text-on-surface text-sm outline-none focus:ring-1 focus:ring-primary/20 min-h-[48px] touch-manipulation" />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Catatan</label>
-                        <input type="text" value={t.note} onChange={(e) => handleUpdateTransaction(t.id, 'note', e.target.value)} className="w-full px-3 py-2.5 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white text-sm min-h-[48px] touch-manipulation" placeholder="Catatan..." />
+                        <label className="block text-xs font-medium text-on-surface-variant mb-1">Catatan</label>
+                        <input type="text" value={t.note} onChange={(e) => handleUpdateTransaction(t.id, 'note', e.target.value)} className="w-full px-3 py-2.5 bg-surface-container-low border-none rounded-xl text-on-surface text-sm outline-none focus:ring-1 focus:ring-primary/20 min-h-[48px] touch-manipulation" placeholder="Catatan..." />
                       </div>
                     </div>
                   </div>
@@ -536,15 +534,15 @@ const QuickAddModal = ({ isOpen, onClose, categories, wallets, userId, appId, fm
               </div>
 
               <div className="flex flex-col sm:flex-row justify-end gap-3">
-                <button onClick={handleReset} className="w-full sm:w-auto px-6 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium min-h-[48px] touch-manipulation">
+                <button onClick={handleReset} className="w-full sm:w-auto px-6 py-2.5 border border-outline text-on-surface-variant rounded-xl hover:bg-surface-container font-medium min-h-[48px] touch-manipulation">
                   Reset
                 </button>
                 <button
                   onClick={handleApproveSelected}
                   disabled={isProcessing || detectedTransactions.filter(t => t.selected).length === 0}
-                  className="w-full sm:w-auto px-8 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[48px] touch-manipulation"
+                  className="w-full sm:w-auto px-8 py-2.5 bg-primary text-on-primary rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[48px] touch-manipulation shadow-lg shadow-primary/20 hover:scale-[0.98] active:scale-95 transition-all"
                 >
-                  <CheckCircle size={18} />
+                  <Icon name="check_circle" size={18} fill={1} />
                   Approve & Simpan ({detectedTransactions.filter(t => t.selected).length})
                 </button>
               </div>
