@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Wallet, LogIn, Users, Lock, Eye, EyeOff, ChevronRight, ArrowLeft, CheckCircle, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
 import { useI18n } from '../../i18n/I18nContext';
+import { IS_DEMO_MODE } from '../../config/firebase';
 
 export default function LoginPage({ onLogin, onHouseholdLogin, isLoading }) {
   const { t, lang, setLang } = useI18n();
@@ -39,6 +40,8 @@ export default function LoginPage({ onLogin, onHouseholdLogin, isLoading }) {
     e.preventDefault();
     setFormError('');
 
+    if (IS_DEMO_MODE) return setFormError(t('auth.errorDemo'));
+
     if (!householdName.trim()) return setFormError(t('auth.errorHouseholdName'));
     if (!memberName.trim())    return setFormError(t('auth.errorMemberName'));
 
@@ -53,21 +56,22 @@ export default function LoginPage({ onLogin, onHouseholdLogin, isLoading }) {
       const { createHousehold, joinHousehold } = await import('../../services/householdAuth');
       if (mode === 'create') {
         if (!nameAvailable) return setFormError(t('auth.errorNameTaken'));
-        await createHousehold({
+        const result = await createHousehold({
           householdName,
           memberName,
           pin: usePassword ? null : pin,
           password: usePassword ? password : null,
         });
+        onHouseholdLogin({ householdName: result.householdName, memberName: result.memberName, householdId: result.householdId, authUid: result.authUid });
       } else {
-        await joinHousehold({
+        const result = await joinHousehold({
           householdName,
           memberName,
           pin: usePassword ? null : pin,
           password: usePassword ? password : null,
         });
+        onHouseholdLogin({ householdName: result.householdName, memberName: result.memberName, householdId: result.householdId, authUid: result.authUid });
       }
-      onHouseholdLogin({ householdName: householdName.trim(), memberName: memberName.trim() });
     } catch (err) {
       setFormError(err.message || t('auth.errorGeneral'));
     } finally {
@@ -111,17 +115,19 @@ export default function LoginPage({ onLogin, onHouseholdLogin, isLoading }) {
             <LogIn size={16} />
             {t('auth.tabGoogle')}
           </button>
-          <button
-            onClick={() => setActiveTab('pin')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'pin'
-                ? 'bg-white dark:bg-gray-600 text-pink-500 shadow-sm'
-                : 'text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white'
-            }`}
-          >
-            <ShieldCheck size={16} />
-            {t('auth.tabPinPassword')}
-          </button>
+          {!IS_DEMO_MODE && (
+            <button
+              onClick={() => setActiveTab('pin')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
+                activeTab === 'pin'
+                  ? 'bg-white dark:bg-gray-600 text-pink-500 shadow-sm'
+                  : 'text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white'
+              }`}
+            >
+              <ShieldCheck size={16} />
+              {t('auth.tabPinPassword')}
+            </button>
+          )}
         </div>
 
         {/* ── Google Tab ─────────────────────────────────── */}

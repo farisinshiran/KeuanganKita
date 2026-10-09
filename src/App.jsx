@@ -207,11 +207,12 @@ export default function App() {
   // ── Auth ────────────────────────────────────────────────────
   const handleLogin  = () => signInWithPopup(auth, new GoogleAuthProvider()).catch(e => alert(e.message));
   const handleHouseholdLogin = useCallback((householdData) => {
-    const data = { ...householdData, authUid: user?.uid || 'anon' };
+    // authUid comes from the household auth service (anonymous Firebase UID)
+    const data = { ...householdData };
     setHousehold(data);
     localStorage.setItem('dkHousehold', JSON.stringify(data));
     setRefreshKey(k => k + 1);
-  }, [user]);
+  }, []);
   const handleLogout = useCallback(() => {
     if (household) {
       setHousehold(null);
