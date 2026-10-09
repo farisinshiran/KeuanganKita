@@ -141,7 +141,7 @@ async function callOpenRouter(apiKey, model, messages, systemPrompt) {
       'Content-Type':  'application/json',
       'Authorization': `Bearer ${apiKey}`,
       'HTTP-Referer':  window.location.origin,
-      'X-Title':       'Dompet Keluarga AI Advisor',
+      'X-Title':       'KeuanganKita AI Advisor',
     },
     body: JSON.stringify({
       model,
@@ -266,8 +266,8 @@ export default function AIAdvisorPanel({ isOpen, onToggle, summary, transactions
         {/* ── Header ──────────────────────────────────────────────── */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 p-3 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="p-1.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg shrink-0">
-              <Bot size={17} className="text-emerald-600 dark:text-emerald-400" />
+            <div className="p-1.5 bg-pink-50 dark:bg-pink-900/30 rounded-lg shrink-0">
+              <Bot size={17} className="text-pink-400 dark:text-pink-300" />
             </div>
             <div className="min-w-0">
               <p className="font-bold text-gray-800 dark:text-gray-100 text-sm leading-tight truncate">
@@ -277,7 +277,7 @@ export default function AIAdvisorPanel({ isOpen, onToggle, summary, transactions
                 {provider === 'gemini'
                   ? 'Google Gemini'
                   : (OR_MODELS.find(m => m.value === orModel)?.label || orModel)}
-                {activeKey && <span className="ml-1 text-emerald-500">✓</span>}
+                {activeKey && <span className="ml-1 text-pink-400">✓</span>}
               </p>
             </div>
           </div>
@@ -296,7 +296,7 @@ export default function AIAdvisorPanel({ isOpen, onToggle, summary, transactions
               onClick={() => setShowSettings(v => !v)}
               className={`p-1.5 rounded-lg transition-colors ${
                 showSettings
-                  ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600'
+                  ? 'bg-pink-100 dark:bg-pink-900/30 text-pink-500'
                   : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
               title="Pengaturan AI"
@@ -334,7 +334,7 @@ export default function AIAdvisorPanel({ isOpen, onToggle, summary, transactions
                 onClick={() => setProvider('gemini')}
                 className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
                   provider === 'gemini'
-                    ? 'bg-white dark:bg-gray-700 border-emerald-500 text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-300/50'
+                    ? 'bg-white dark:bg-gray-700 border-pink-400 text-pink-600 dark:text-pink-300 ring-1 ring-pink-300/50'
                     : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700'
                 }`}
               >
@@ -344,7 +344,7 @@ export default function AIAdvisorPanel({ isOpen, onToggle, summary, transactions
                 onClick={() => setProvider('openrouter')}
                 className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
                   provider === 'openrouter'
-                    ? 'bg-white dark:bg-gray-700 border-emerald-500 text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-300/50'
+                    ? 'bg-white dark:bg-gray-700 border-pink-400 text-pink-600 dark:text-pink-300 ring-1 ring-pink-300/50'
                     : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700'
                 }`}
               >
@@ -364,7 +364,7 @@ export default function AIAdvisorPanel({ isOpen, onToggle, summary, transactions
                   type="password"
                   value={geminiKey}
                   onChange={e => setGeminiKey(e.target.value.trim())}
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-xs bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-xs bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-pink-400 outline-none"
                   placeholder="AIzaSy..."
                 />
               </div>
@@ -381,7 +381,7 @@ export default function AIAdvisorPanel({ isOpen, onToggle, summary, transactions
                     type="password"
                     value={orKey}
                     onChange={e => setOrKey(e.target.value.trim())}
-                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-xs bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-xs bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-pink-400 outline-none"
                     placeholder="sk-or-..."
                   />
                 </div>
@@ -391,7 +391,7 @@ export default function AIAdvisorPanel({ isOpen, onToggle, summary, transactions
                     <select
                       value={orModel}
                       onChange={e => setOrModel(e.target.value)}
-                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-xs bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none appearance-none pr-7"
+                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-xs bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-pink-400 outline-none appearance-none pr-7"
                     >
                       {OR_MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
                     </select>
@@ -418,8 +418,8 @@ export default function AIAdvisorPanel({ isOpen, onToggle, summary, transactions
           {/* Empty state */}
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full gap-4 text-center py-6">
-              <div className="p-3 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl">
-                <Sparkles size={26} className="text-emerald-500" />
+              <div className="p-3 bg-pink-50 dark:bg-pink-900/30 rounded-2xl">
+                <Sparkles size={26} className="text-pink-400" />
               </div>
               <div>
                 <p className="font-semibold text-gray-700 dark:text-gray-300 text-sm">
@@ -432,7 +432,7 @@ export default function AIAdvisorPanel({ isOpen, onToggle, summary, transactions
               {!activeKey && (
                 <button
                   onClick={() => setShowSettings(true)}
-                  className="flex items-center gap-1.5 bg-emerald-600 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-700 transition-colors text-xs"
+                  className="flex items-center gap-1.5 bg-pink-400 text-white px-3 py-1.5 rounded-lg hover:bg-pink-500 transition-colors text-xs"
                 >
                   <Key size={13} /> Atur API Key dulu
                 </button>
@@ -443,7 +443,7 @@ export default function AIAdvisorPanel({ isOpen, onToggle, summary, transactions
                     key={i}
                     onClick={() => sendMessage(p)}
                     disabled={isLoading || !activeKey}
-                    className="text-left text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 hover:border-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors text-gray-600 dark:text-gray-300 disabled:opacity-50"
+                    className="text-left text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 hover:border-pink-400 hover:bg-pink-50 dark:hover:bg-pink-900/20 transition-colors text-gray-600 dark:text-gray-300 disabled:opacity-50"
                   >
                     {p}
                   </button>
@@ -458,7 +458,7 @@ export default function AIAdvisorPanel({ isOpen, onToggle, summary, transactions
               <div
                 className={`max-w-[90%] rounded-2xl px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${
                   msg.role === 'user'
-                    ? 'bg-emerald-600 text-white rounded-br-md'
+                    ? 'bg-pink-400 text-white rounded-br-md'
                     : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-100 dark:border-gray-700 rounded-bl-md shadow-sm'
                 }`}
               >
@@ -475,7 +475,7 @@ export default function AIAdvisorPanel({ isOpen, onToggle, summary, transactions
                   {[0, 1, 2].map(i => (
                     <div
                       key={i}
-                      className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce"
+                      className="w-1.5 h-1.5 bg-pink-400 rounded-full animate-bounce"
                       style={{ animationDelay: `${i * 0.15}s` }}
                     />
                   ))}
@@ -495,7 +495,7 @@ export default function AIAdvisorPanel({ isOpen, onToggle, summary, transactions
                 key={i}
                 onClick={() => sendMessage(p)}
                 disabled={isLoading}
-                className="text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2.5 py-1 rounded-full whitespace-nowrap hover:bg-emerald-100 dark:hover:bg-emerald-900/30 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors disabled:opacity-50 shrink-0"
+                className="text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2.5 py-1 rounded-full whitespace-nowrap hover:bg-pink-100 dark:hover:bg-pink-900/30 hover:text-pink-600 dark:hover:text-pink-300 transition-colors disabled:opacity-50 shrink-0"
               >
                 {p}
               </button>
@@ -514,12 +514,12 @@ export default function AIAdvisorPanel({ isOpen, onToggle, summary, transactions
               disabled={isLoading}
               rows={1}
               placeholder="Ketik pertanyaan… (Enter untuk kirim)"
-              className="flex-1 resize-none p-2 rounded-xl border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-emerald-500 outline-none text-xs bg-gray-50 dark:bg-gray-700 dark:text-white transition-all max-h-24 overflow-y-auto disabled:opacity-50"
+              className="flex-1 resize-none p-2 rounded-xl border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-pink-400 outline-none text-xs bg-gray-50 dark:bg-gray-700 dark:text-white transition-all max-h-24 overflow-y-auto disabled:opacity-50"
             />
             <button
               onClick={() => sendMessage()}
               disabled={isLoading || !input.trim()}
-              className="p-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shrink-0 active:scale-95"
+              className="p-2.5 bg-pink-400 text-white rounded-xl hover:bg-pink-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all shrink-0 active:scale-95"
             >
               <Send size={15} />
             </button>
