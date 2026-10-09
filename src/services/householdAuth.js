@@ -67,6 +67,7 @@ async function createHousehold({ householdName, memberName, pin, password }) {
     creatorId:  user.uid,
     authUid:    user.uid,
     members:    [memberName.trim()],
+    memberUids: [user.uid],
   });
 
   return {
@@ -115,7 +116,15 @@ async function joinHousehold({ householdName, memberName, pin, password }) {
   if (!data.members.includes(memberName.trim())) {
     await updateDoc(householdDoc.ref, {
       members: arrayUnion(memberName.trim()),
+      memberUids: arrayUnion(user.uid),
     });
+  } else {
+    // Ensure joiner's UID is recorded even if member name already exists
+    if (!data.memberUids || !data.memberUids.includes(user.uid)) {
+      await updateDoc(householdDoc.ref, {
+        memberUids: arrayUnion(user.uid),
+      });
+    }
   }
 
   return {

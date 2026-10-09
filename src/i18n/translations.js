@@ -48,6 +48,7 @@ export const translations = {
       errorPasswordLength: 'Password minimal 4 karakter',
       errorNameTaken: 'Nama household sudah dipakai orang lain',
       errorGeneral: 'Terjadi kesalahan. Silakan coba lagi.',
+      errorDemo: 'Fitur Household tidak tersedia dalam mode demo. Gunakan login Google untuk mengakses fitur lengkap.',
       members: 'Anggota',
     },
     nav: {
@@ -236,6 +237,7 @@ export const translations = {
       errorPasswordLength: 'Password must be at least 4 characters',
       errorNameTaken: 'Household name is already taken',
       errorGeneral: 'An error occurred. Please try again.',
+      errorDemo: 'Household feature is not available in demo mode. Use Google login for full features.',
       members: 'Members',
     },
     nav: {
