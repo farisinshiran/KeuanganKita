@@ -35,6 +35,13 @@ const NAV_GROUPS = [
       { id: 'categories',   icon: 'category',           labelKey: 'nav.categories' },
     ],
   },
+  {
+    id: 'family',
+    labelKey: 'nav.group.family',
+    items: [
+      { id: 'kids', icon: 'family_restroom', labelKey: 'nav.family' },
+    ],
+  },
 ];
 
 // Flat list for external consumers (e.g. App.jsx key matching)
