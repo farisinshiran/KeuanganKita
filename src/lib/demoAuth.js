@@ -15,6 +15,9 @@ export const getAuth = () => ({ currentUser: DEMO_USER });
 export class GoogleAuthProvider {}
 
 /** In demo mode sign-in is instant — the user is already "logged in". */
+export const signInAnonymously = async () => ({ user: DEMO_USER });
+
+/** Sign-in is a no-op in demo mode (already "logged in"). */
 export const signInWithPopup = async () => ({ user: DEMO_USER });
 
 /** Sign-out is a no-op in demo mode. */
