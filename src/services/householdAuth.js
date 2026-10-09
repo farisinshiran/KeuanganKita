@@ -6,7 +6,6 @@
  */
 import {
   signInAnonymously,
-  onAuthStateChanged,
   signOut,
 } from 'firebase/auth';
 import {
@@ -35,18 +34,20 @@ async function verifyCredentials(plainText, storedHash) {
 
 // ── Get or create anonymous Firebase Auth user ───────────────
 async function ensureAnonUser() {
-  return new Promise((resolve, reject) => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      unsub();
-      if (user) return resolve(user);
-      try {
-        const cred = await signInAnonymously(auth);
-        resolve(cred.user);
-      } catch (err) {
-        reject(err);
-      }
-    });
-  });
+  // If already signed in anonymously, return current user
+  if (auth.currentUser) {
+    return auth.currentUser;
+  }
+
+  // Sign in anonymously using Firebase docs pattern
+  try {
+    const result = await signInAnonymously(auth);
+    console.log('[householdAuth] Anonymous sign-in successful:', result.user.uid);
+    return result.user;
+  } catch (error) {
+    console.error('[householdAuth] Anonymous sign-in failed:', error.code, error.message);
+    throw new Error(`Authentication failed: ${error.message} (${error.code})`);
+  }
 }
 
 // ── Create a new household ───────────────────────────────────
