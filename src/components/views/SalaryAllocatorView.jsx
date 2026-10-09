@@ -479,7 +479,7 @@ const SalaryAllocatorView = ({ categories, wallets, transactions, userId, appId,
     if (allocationAmount <= 0) return { label: 'Belum Diatur', className: 'text-gray-500 dark:text-gray-400' };
     if (spentAmount > allocationAmount) return { label: 'Melebihi', className: 'text-red-600 dark:text-red-400' };
     if (spentAmount === allocationAmount) return { label: 'Pas', className: 'text-amber-600 dark:text-amber-400' };
-    return { label: 'Aman', className: 'text-emerald-600 dark:text-emerald-400' };
+    return { label: 'Aman', className: 'text-pink-500 dark:text-pink-300' };
   };
 
   return (

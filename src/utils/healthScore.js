@@ -91,7 +91,7 @@ export function calculateHealthScore(summary, transactions, categories) {
 }
 
 export function getScoreStatus(score) {
-  if (score >= 80) return { label: 'Sangat Baik',     color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20', border: 'border-emerald-200 dark:border-emerald-800', barColor: 'bg-emerald-500', ringColor: '#10B981' };
+  if (score >= 80) return { label: 'Sangat Baik',     color: 'text-pink-500 dark:text-pink-300', bg: 'bg-pink-50 dark:bg-pink-900/20', border: 'border-pink-200 dark:border-pink-800', barColor: 'bg-pink-400', ringColor: '#D4A5A5' };
   if (score >= 60) return { label: 'Baik',            color: 'text-blue-600 dark:text-blue-400',       bg: 'bg-blue-50 dark:bg-blue-900/20',       border: 'border-blue-200 dark:border-blue-800',    barColor: 'bg-blue-500',     ringColor: '#3B82F6' };
   if (score >= 40) return { label: 'Cukup',           color: 'text-amber-600 dark:text-amber-400',     bg: 'bg-amber-50 dark:bg-amber-900/20',     border: 'border-amber-200 dark:border-amber-800',  barColor: 'bg-amber-500',    ringColor: '#F59E0B' };
   return            { label: 'Perlu Perhatian',       color: 'text-red-600 dark:text-red-400',         bg: 'bg-red-50 dark:bg-red-900/20',         border: 'border-red-200 dark:border-red-800',      barColor: 'bg-red-500',      ringColor: '#EF4444' };

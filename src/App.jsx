@@ -7,6 +7,7 @@ import { collection, addDoc, serverTimestamp, doc, writeBatch } from 'firebase/f
 import { auth, db, appId, APP_VERSION, IS_DEMO_MODE } from './config/firebase';
 import { formatCurrency } from './utils/formatters';
 import { useI18n } from './i18n/I18nContext';
+import { householdSignOut } from './services/householdAuth';
 
 // --- CUSTOM HOOK (all Firestore data) ---
 import { useAppData } from './hooks/useAppData';
@@ -37,7 +38,7 @@ const QuickAddModal    = lazy(() => import('./components/modals/QuickAddModal'))
 const PageLoader = ({ text }) => (
   <div className="flex items-center justify-center w-full py-40">
     <div className="flex flex-col items-center gap-3">
-      <div className="w-10 h-10 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
+      <div className="w-10 h-10 border-4 border-pink-200 border-t-pink-400 rounded-full animate-spin" />
       <p className="text-sm text-gray-400 dark:text-gray-500 animate-pulse">{text}</p>
     </div>
   </div>
@@ -102,7 +103,14 @@ async function migrateFromDemo(user, firestoreDb, firestoreAppId, rawJson = null
 // ============================================================
 export default function App() {
   const { t } = useI18n();
-  const [user, setUser]       = useState(null);
+  const [user, setUser]         = useState(null);
+  // ── Household state (from PIN/Password login) ──────────────
+  const [household, setHousehold] = useState(() => {
+    try {
+      const saved = localStorage.getItem('dkHousehold');
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
   const [authLoading, setAuthLoading] = useState(true);
   const [activeTab, setActiveTab]     = useState('dashboard');
   const [privacyMode, setPrivacyMode] = useState(false);
@@ -128,8 +136,9 @@ export default function App() {
   const mainRef     = useRef(null);
 
   // ── All remote data from custom hook ───────────────────────
+  const dataOwnerId = household?.householdId || user?.uid;
   const { transactions, investments, categories, investTypes, wallets, subscriptions, savingsGoals, dataLoading } =
-    useAppData(user, refreshKey);
+    useAppData(dataOwnerId, refreshKey);
 
   // ── Dark mode ───────────────────────────────────────────────
   useEffect(() => {
@@ -139,7 +148,7 @@ export default function App() {
 
   // ── Detect leftover demo data after login ───────────────────
   useEffect(() => {
-    if (!user || IS_DEMO_MODE) return;
+    if ((!user && !household) || IS_DEMO_MODE) return;
     try {
       const raw = localStorage.getItem(DEMO_STORE_KEY);
       if (!raw) return;
@@ -196,7 +205,19 @@ export default function App() {
   }, []);
   // ── Auth ────────────────────────────────────────────────────
   const handleLogin  = () => signInWithPopup(auth, new GoogleAuthProvider()).catch(e => alert(e.message));
-  const handleLogout = () => signOut(auth);
+  const handleHouseholdLogin = useCallback((householdData) => {
+    const data = { ...householdData, authUid: user?.uid || 'anon' };
+    setHousehold(data);
+    localStorage.setItem('dkHousehold', JSON.stringify(data));
+    setRefreshKey(k => k + 1);
+  }, [user]);
+  const handleLogout = useCallback(() => {
+    if (household) {
+      setHousehold(null);
+      localStorage.removeItem('dkHousehold');
+    }
+    householdSignOut().catch(console.error);
+  }, [household]);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, u => { setUser(u); setAuthLoading(false); });
@@ -251,7 +272,7 @@ export default function App() {
     const currentMonth = today.getMonth();
     const currentYear  = today.getFullYear();
     const daysInMonth  = (y, m) => new Date(y, m + 1, 0).getDate();
-    const baseFn       = () => collection(db, 'artifacts', appId, 'users', user.uid, 'transactions');
+    const baseFn       = () => collection(db, 'artifacts', appId, 'households', dataOwnerId, 'transactions');
 
     (async () => {
       for (const sub of subscriptions) {
@@ -277,7 +298,7 @@ export default function App() {
         }
       }
     })();
-  }, [user, subscriptions, wallets, transactions]);
+  }, [dataOwnerId, subscriptions, wallets, transactions]);
 
   // ── Wallet balance — O(n) single-pass Map ───────────────────
   const summary = useMemo(() => {
@@ -315,13 +336,15 @@ export default function App() {
 
   // ── Guards ──────────────────────────────────────────────────
   if (authLoading) return (
-    <div className="min-h-screen flex items-center justify-center dark:bg-gray-900 text-emerald-600 font-bold animate-pulse">
+    <div className="min-h-screen flex items-center justify-center dark:bg-gray-900 text-pink-400 font-bold animate-pulse">
       {t('common.loadingApp')}
     </div>
   );
-  if (!user) return <LoginPage onLogin={handleLogin} />;
+  if (!user && !household) return (
+    <LoginPage onLogin={handleLogin} onHouseholdLogin={handleHouseholdLogin} isLoading={false} />
+  );
 
-  const uid   = user.uid;
+  const uid   = user?.uid || 'household';
   const wBals = summary.walletBalances;
 
   return (
@@ -330,7 +353,7 @@ export default function App() {
       {/* ── Pull-to-Refresh overlay ── */}
       {isPulling && (
         <div
-          className="fixed top-0 left-0 right-0 z-[100] flex items-center justify-center bg-emerald-500 text-white transition-all duration-200"
+          className="fixed top-0 left-0 right-0 z-[100] flex items-center justify-center bg-pink-400 text-white transition-all duration-200"
           style={{ height: `${Math.min(pullDistance, 80)}px`, opacity: pullDistance / 80 }}
         >
           <div className="flex items-center gap-2">
@@ -342,7 +365,7 @@ export default function App() {
       {isRefreshing && (
         <div className="fixed inset-0 z-[100] bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
-            <RefreshCw size={32} className="text-emerald-600 animate-spin" />
+            <RefreshCw size={32} className="text-pink-400 animate-spin" />
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('common.refreshingData')}</p>
           </div>
         </div>
@@ -384,7 +407,7 @@ export default function App() {
                 { id: 'categories', label: 'Categories' },
                 { id: 'ai-advisor', label: 'AI Advisor' },
               ];
-              return allItems.find(i => i.id === tab)?.label ?? 'Dompet Keluarga';
+              return allItems.find(i => i.id === tab)?.label ?? 'KeuanganKita';
             })()}
           </h2>
           <p className="text-xs text-slate-400 dark:text-slate-500">
@@ -453,7 +476,7 @@ export default function App() {
           </div>
         )}
         {demoMigration === 'done' && (
-          <div className="mb-4 -mx-4 md:-mx-8 -mt-4 md:-mt-8 px-4 py-3 bg-emerald-50 dark:bg-emerald-900/20 border-b border-emerald-200 dark:border-emerald-700 flex items-center justify-center gap-2 text-sm text-emerald-800 dark:text-emerald-300">
+          <div className="mb-4 -mx-4 md:-mx-8 -mt-4 md:-mt-8 px-4 py-3 bg-pink-50 dark:bg-pink-900/20 border-b border-pink-200 dark:border-pink-700 flex items-center justify-center gap-2 text-sm text-pink-800 dark:text-pink-300">
             <span>✅ {demoMigrateCount} data berhasil diimpor ke Firebase!</span>
           </div>
         )}
@@ -470,7 +493,7 @@ export default function App() {
           </div>
         )}
 
-        {/* Restore panel: shown when Firestore is empty after loading */}
+        Restore panel: shown when Firestore is empty after loading
         {!IS_DEMO_MODE && !dataLoading && transactions.length === 0 && demoMigration === null && (
           <div className="mb-4 -mx-4 md:-mx-8 -mt-4 md:-mt-8 px-4 py-2.5 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-center gap-2 text-xs text-gray-500 dark:text-gray-400">
             <span>Punya data dari browser lain atau domain lama?</span>
@@ -513,18 +536,18 @@ export default function App() {
 
         {/* Mobile top-bar */}
         <div className="md:hidden flex justify-between items-center mb-6">
-          <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+          <div className="flex items-center gap-2 text-pink-600 dark:text-pink-300">
             <Wallet className="w-6 h-6" />
             <h1 className="font-bold text-lg">{t('common.appName')}</h1>
           </div>
           <div className="flex items-center gap-4">
-            <button onClick={() => setPrivacyMode(p => !p)} className="text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400">
+            <button onClick={() => setPrivacyMode(p => !p)} className="text-gray-400 hover:text-pink-400 dark:hover:text-pink-300">
               {privacyMode ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
             <button onClick={() => setDarkMode(d => !d)} className="text-gray-400 hover:text-amber-500">
               {darkMode ? <Sun size={20} /> : <Moon size={20} />}
             </button>
-            <button onClick={() => setIsMobileMenuOpen(true)} className="text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400">
+            <button onClick={() => setIsMobileMenuOpen(true)} className="text-gray-400 hover:text-pink-400 dark:hover:text-pink-300">
               <Menu size={24} />
             </button>
           </div>
@@ -575,8 +598,8 @@ export default function App() {
           onClick={() => setIsAIOpen(v => !v)}
           className={`group flex items-center gap-3 px-4 py-3 rounded-full shadow-lg transition-all duration-300 hover:scale-105 active:scale-95 min-h-[48px] border-2 ${
             isAIOpen
-              ? 'bg-emerald-600 border-emerald-600 text-white'
-              : 'bg-white dark:bg-gray-800 hover:bg-emerald-50 dark:hover:bg-gray-700 border-emerald-600 text-emerald-600'
+              ? 'bg-pink-400 border-pink-400 text-white'
+              : 'bg-white dark:bg-gray-800 hover:bg-pink-50 dark:hover:bg-gray-700 border-pink-400 text-pink-500'
           }`}
         >
           <span className="text-sm font-semibold hidden sm:group-hover:inline-block animate-in fade-in slide-in-from-right-2 duration-200">AI Advisor</span>
@@ -584,14 +607,14 @@ export default function App() {
         </button>
         <button
           onClick={() => setIsQuickAddModalOpen(true)}
-          className="group flex items-center gap-3 bg-white dark:bg-gray-800 hover:bg-emerald-50 dark:hover:bg-gray-700 border-2 border-emerald-600 text-emerald-600 px-4 py-3 rounded-full shadow-lg transition-all duration-300 hover:scale-105 active:scale-95 min-h-[48px]"
+          className="group flex items-center gap-3 bg-white dark:bg-gray-800 hover:bg-pink-50 dark:hover:bg-gray-700 border-2 border-pink-400 text-pink-500 px-4 py-3 rounded-full shadow-lg transition-all duration-300 hover:scale-105 active:scale-95 min-h-[48px]"
         >
           <span className="text-sm font-semibold hidden sm:group-hover:inline-block animate-in fade-in slide-in-from-right-2 duration-200">{t('common.quickAdd')}</span>
           <ScanLine size={22} strokeWidth={2.5} />
         </button>
         <button
           onClick={() => setIsTransactionModalOpen(true)}
-          className="w-14 h-14 sm:w-16 sm:h-16 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
+          className="w-14 h-14 sm:w-16 sm:h-16 bg-pink-400 hover:bg-pink-500 text-white rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
         >
           <Plus size={24} strokeWidth={2.5} />
         </button>

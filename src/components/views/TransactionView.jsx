@@ -196,7 +196,7 @@ const TransactionView = ({ transactions, categories, wallets, investments = [], 
       </div>
 
       {isFormOpen && (
-        <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md border border-emerald-100 dark:border-gray-700 animate-in fade-in slide-in-from-top-4 mb-6 transition-colors duration-300">
+        <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md border border-pink-100 dark:border-gray-700 animate-in fade-in slide-in-from-top-4 mb-6 transition-colors duration-300">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
              <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Jenis Transaksi</label>
@@ -211,21 +211,21 @@ const TransactionView = ({ transactions, categories, wallets, investments = [], 
 
              <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Jumlah (Rp)</label>
-                <input type="number" required value={formData.amount} onChange={e=>setFormData({...formData, amount:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white dark:bg-gray-700 dark:text-white" placeholder="0"/>
+                <input type="number" required value={formData.amount} onChange={e=>setFormData({...formData, amount:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-400 focus:border-pink-400 outline-none transition-all bg-white dark:bg-gray-700 dark:text-white" placeholder="0"/>
              </div>
 
              {formData.type === 'transfer' ? (
                 <>
                   <div className="space-y-2">
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Dari (Sumber)</label>
-                    <select required value={formData.sourceWalletId} onChange={e=>setFormData({...formData, sourceWalletId:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 dark:text-white">
+                    <select required value={formData.sourceWalletId} onChange={e=>setFormData({...formData, sourceWalletId:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-400 bg-white dark:bg-gray-700 dark:text-white">
                       <option value="">Pilih Sumber...</option>
                       {wallets.map(w=><option key={w.id} value={w.id}>{w.icon} {w.name} ({fmt(w.currentBalance)})</option>)}
                     </select>
                   </div>
                   <div className="space-y-2">
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Ke (Tujuan)</label>
-                    <select required value={formData.targetWalletId} onChange={e=>setFormData({...formData, targetWalletId:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 dark:text-white">
+                    <select required value={formData.targetWalletId} onChange={e=>setFormData({...formData, targetWalletId:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-400 bg-white dark:bg-gray-700 dark:text-white">
                       <option value="">Pilih Tujuan...</option>
                       {wallets.filter(w => w.id !== formData.sourceWalletId).map(w=><option key={w.id} value={w.id}>{w.icon} {w.name}</option>)}
                     </select>
@@ -235,7 +235,7 @@ const TransactionView = ({ transactions, categories, wallets, investments = [], 
                 <>
                   <div className="space-y-2">
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Kantong / Akun</label>
-                    <select required value={formData.walletId} onChange={e=>setFormData({...formData, walletId:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 dark:text-white">
+                    <select required value={formData.walletId} onChange={e=>setFormData({...formData, walletId:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-400 bg-white dark:bg-gray-700 dark:text-white">
                       <option value="">Pilih Akun...</option>
                       {wallets.map(w=><option key={w.id} value={w.id}>{w.icon} {w.name}</option>)}
                     </select>
@@ -243,7 +243,7 @@ const TransactionView = ({ transactions, categories, wallets, investments = [], 
                   {formData.type === 'investment' || formData.type === 'investment_sale' ? (
                     <div className="space-y-2">
                       <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Portofolio Aset</label>
-                      <select required value={formData.investmentId} onChange={e=>setFormData({...formData, investmentId:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 dark:text-white transition-all">
+                      <select required value={formData.investmentId} onChange={e=>setFormData({...formData, investmentId:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-400 bg-white dark:bg-gray-700 dark:text-white transition-all">
                         <option value="">Pilih Aset...</option>
                         {investments.map(inv=><option key={inv.id} value={inv.id}>{inv.icon || '💼'} {inv.name} ({fmt(inv.currentValue || 0)})</option>)}
                       </select>
@@ -252,7 +252,7 @@ const TransactionView = ({ transactions, categories, wallets, investments = [], 
                   ) : (
                     <div className="space-y-2">
                       <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Kategori</label>
-                      <select required value={formData.category} onChange={e=>setFormData({...formData, category:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 dark:text-white transition-all"><option value="">Pilih Kategori...</option>{cats.map(c=><option key={c} value={c}>{c}</option>)}</select>
+                      <select required value={formData.category} onChange={e=>setFormData({...formData, category:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-400 bg-white dark:bg-gray-700 dark:text-white transition-all"><option value="">Pilih Kategori...</option>{cats.map(c=><option key={c} value={c}>{c}</option>)}</select>
                     </div>
                   )}
                 </>
@@ -260,14 +260,14 @@ const TransactionView = ({ transactions, categories, wallets, investments = [], 
 
              <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Tanggal</label>
-                <input type="date" required value={formData.date} onChange={e=>setFormData({...formData, date:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white dark:bg-gray-700 dark:text-white"/>
+                <input type="date" required value={formData.date} onChange={e=>setFormData({...formData, date:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-400 focus:border-pink-400 outline-none transition-all bg-white dark:bg-gray-700 dark:text-white"/>
              </div>
              <div className="md:col-span-2 space-y-2">
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Catatan</label>
-                <input value={formData.note} onChange={e=>setFormData({...formData, note:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white dark:bg-gray-700 dark:text-white" placeholder="Opsional (misal: Mutasi ke e-wallet)"/>
+                <input value={formData.note} onChange={e=>setFormData({...formData, note:e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-400 focus:border-pink-400 outline-none transition-all bg-white dark:bg-gray-700 dark:text-white" placeholder="Opsional (misal: Mutasi ke e-wallet)"/>
              </div>
           </div>
-          <div className="flex justify-end"><button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-2.5 rounded-lg font-medium flex items-center gap-2 shadow-lg shadow-emerald-200/50 transition-all"><Save size={18}/> {formData.id ? 'Update Data' : 'Simpan Transaksi'}</button></div>
+          <div className="flex justify-end"><button type="submit" className="bg-pink-400 hover:bg-pink-500 text-white px-8 py-2.5 rounded-lg font-medium flex items-center gap-2 shadow-lg shadow-pink-200/50 transition-all"><Save size={18}/> {formData.id ? 'Update Data' : 'Simpan Transaksi'}</button></div>
         </form>
       )}
 
@@ -312,7 +312,7 @@ const TransactionView = ({ transactions, categories, wallets, investments = [], 
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${t.type==='income'?'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400':'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{t.category}</span>
                       )}
                       {t.subscriptionId && (<span className="ml-2" title="Dibuat otomatis"><Bot size={12} className="inline text-purple-500"/></span>)}
-                      {t.quickAddSource && (<span className="ml-2" title="Ditambahkan via Tambah Cepat AI Scanner"><ScanLine size={12} className="inline text-emerald-500"/></span>)}
+                      {t.quickAddSource && (<span className="ml-2" title="Ditambahkan via Tambah Cepat AI Scanner"><ScanLine size={12} className="inline text-pink-400"/></span>)}
                     </td>
                     <td className="p-4 text-sm text-gray-600 dark:text-gray-400 truncate max-w-xs">{t.note||'-'}</td>
                     <td className={`p-4 text-sm font-medium text-right whitespace-nowrap ${t.type==='income' || t.type === 'investment_sale' ?'text-green-600 dark:text-green-400': t.type === 'expense' || t.type === 'investment' ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`}>
@@ -376,7 +376,7 @@ const TransactionView = ({ transactions, categories, wallets, investments = [], 
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${t.type==='income'?'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400':'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{t.category}</span>
                   )}
                   {t.subscriptionId && (<span title="Dibuat otomatis"><Bot size={12} className="text-purple-500"/></span>)}
-                  {t.quickAddSource && (<span title="Ditambahkan via Tambah Cepat AI Scanner"><ScanLine size={12} className="text-emerald-500"/></span>)}
+                  {t.quickAddSource && (<span title="Ditambahkan via Tambah Cepat AI Scanner"><ScanLine size={12} className="text-pink-400"/></span>)}
                 </div>
 
                 <p className="text-sm text-gray-600 dark:text-gray-400 break-words">{t.note||'-'}</p>

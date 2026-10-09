@@ -3,6 +3,10 @@
  * Custom hook that encapsulates all Firestore onSnapshot subscriptions.
  * Accepts a `refreshKey` (number) — incrementing it re-runs all subscriptions
  * without a full page reload, replacing the previous window.location.reload(true).
+ *
+ * @param {string|null} dataOwnerId  - Firebase Auth UID (Google) or householdId (PIN/password).
+ *                                     When null, clears all subscriptions.
+ * @param {number} refreshKey       - Increment to force re-subscription.
  */
 import { useState, useEffect, useRef } from 'react';
 import {
@@ -17,7 +21,7 @@ import {
 
 const EMPTY_CATEGORIES = { expense: [], income: [], raw: [] };
 
-export function useAppData(user, refreshKey = 0) {
+export function useAppData(dataOwnerId, refreshKey = 0) {
   const [transactions, setTransactions]   = useState([]);
   const [investments, setInvestments]     = useState([]);
   const [categories, setCategories]       = useState(EMPTY_CATEGORIES);
@@ -27,20 +31,35 @@ export function useAppData(user, refreshKey = 0) {
   const [savingsGoals, setSavingsGoals]   = useState([]);
   const [dataLoading, setDataLoading]     = useState(true);
 
-  // Seed guards — reset when user or refreshKey changes
+  // Seed guards — reset when dataOwnerId or refreshKey changes
   const walletsInit    = useRef(false);
   const invTypesInit   = useRef(false);
   const categoriesInit = useRef(false);
 
   useEffect(() => {
-    if (!user) {
-      // State already initialised to empty defaults; just reset seed guards
+    if (!dataOwnerId) {
+      // No owner yet — clear all state
+      setTransactions([]);
+      setInvestments([]);
+      setCategories(EMPTY_CATEGORIES);
+      setInvestTypes([]);
+      setWallets([]);
+      setSubscriptions([]);
+      setSavingsGoals([]);
       walletsInit.current    = false;
       invTypesInit.current   = false;
       categoriesInit.current = false;
       return;
     }
 
+    // Determine Firestore data path:
+    // - household mode: artifacts/{appId}/households/{householdId}/...
+    // - google mode:    artifacts/{appId}/users/{userId}/...
+    // We detect household mode by checking if the ID looks like a Firestore doc ID (alphanumeric, hyphens, 20 chars)
+    const isHousehold = !dataOwnerId.includes('@'); // heuristic: Google UID often has @, household IDs don't
+    const colPath = isHousehold
+      ? ['artifacts', appId, 'households', dataOwnerId]
+      : ['artifacts', appId, 'users', dataOwnerId];
 
     // Reset seed guards on every subscription cycle
     walletsInit.current    = false;
@@ -48,8 +67,7 @@ export function useAppData(user, refreshKey = 0) {
     categoriesInit.current = false;
 
 
-    const uid  = user.uid;
-    const base = (col) => collection(db, 'artifacts', appId, 'users', uid, col);
+    const base = (col) => collection(db, ...colPath, col);
     const dedup = (arr, keyFn) => { const seen = new Set(); return arr.filter(x => seen.has(keyFn(x)) ? false : seen.add(keyFn(x))); };
 
     // ── Transactions ────────────────────────────────────────
@@ -131,7 +149,7 @@ export function useAppData(user, refreshKey = 0) {
       unsubSubs();
       unsubGoals();
     };
-  }, [user, refreshKey]);
+  }, [dataOwnerId, refreshKey]);
 
 
   return { transactions, investments, categories, investTypes, wallets, subscriptions, savingsGoals, dataLoading };

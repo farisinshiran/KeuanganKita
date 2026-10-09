@@ -231,7 +231,7 @@ const BudgetWizard = ({ isOpen, onClose, categories, userId, appId, selectedMont
               </div>
               {incomeNum > 0 && (
                 <div className="grid grid-cols-3 gap-3 mt-2">
-                  {[['Kebutuhan', alloc.needs,'blue'], ['Keinginan', alloc.wants,'purple'], ['Tabungan', alloc.savings,'emerald']].map(([label, val, color]) => (
+                  {[['Kebutuhan', alloc.needs,'blue'], ['Keinginan', alloc.wants,'purple'], ['Tabungan', alloc.savings,'pink']].map(([label, val, color]) => (
                     <div key={label} className={`p-3 rounded-xl bg-${color}-50 dark:bg-${color}-900/20 text-center`}>
                       <p className={`text-xs font-semibold text-${color}-600 dark:text-${color}-400`}>{label}</p>
                       <p className={`text-sm font-bold text-${color}-700 dark:text-${color}-300`}>Rp {val.toLocaleString('id-ID')}</p>

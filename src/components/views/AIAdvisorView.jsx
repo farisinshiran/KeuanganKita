@@ -141,7 +141,7 @@ async function callOpenRouter(apiKey, model, messages, systemPrompt) {
       'Content-Type':  'application/json',
       'Authorization': `Bearer ${apiKey}`,
       'HTTP-Referer':  window.location.origin,
-      'X-Title':       'Dompet Keluarga AI Advisor',
+      'X-Title':       'KeuanganKita AI Advisor',
     },
     body: JSON.stringify({
       model,

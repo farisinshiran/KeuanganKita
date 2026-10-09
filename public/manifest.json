@@ -1,10 +1,10 @@
 {
-  "name": "Dompet Keluarga",
-  "short_name": "DompetKeluarga",
+  "name": "KeuanganKita",
+  "short_name": "KeuanganKita",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#059669",
+  "theme_color": "#D4A5A5",
   "orientation": "portrait",
   "icons": [
     {
