@@ -30,6 +30,7 @@ const EducationFundView         = lazy(() => import('./components/views/Educatio
 const SalarySlipArchiveView     = lazy(() => import('./components/views/SalarySlipArchiveView'));
 const IncomeDiversificationView = lazy(() => import('./components/views/IncomeDiversificationView'));
 const SavingsGoalView           = lazy(() => import('./components/views/SavingsGoalView'));
+const AnakView                  = lazy(() => import('./components/views/AnakView'));
 // --- LAZY-LOADED MODALS ---
 const TransactionModal = lazy(() => import('./components/modals/TransactionModal'));
 const QuickAddModal    = lazy(() => import('./components/modals/QuickAddModal'));
@@ -566,6 +567,7 @@ export default function App() {
           {(activeTab === 'budget'               || activeTab === 'salary-allocator')           && <SalaryAllocatorView       categories={categories} wallets={wBals} transactions={transactions} userId={uid} appId={appId} fmt={fmt} />}
           {activeTab === 'zakat'                                                                && <ZakatView                 summary={summary} investments={investments} fmt={fmt} />}
           {activeTab === 'savings-goals'                                                        && <SavingsGoalView          savingsGoals={savingsGoals} wallets={wBals} userId={uid} appId={appId} fmt={fmt} />}
+          {activeTab === 'kids'                                                                 && <AnakView                  dataOwnerId={dataOwnerId} ownerType={household?.householdId ? 'households' : 'users'} appId={appId} />}
           {activeTab === 'categories'                                                           && <CategoryView              categories={categories} userId={uid} appId={appId} fmt={fmt} />}
 
           {/* Modals */}
