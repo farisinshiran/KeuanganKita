@@ -7,7 +7,7 @@ import { collection, addDoc, serverTimestamp, doc, writeBatch } from 'firebase/f
 import { auth, db, appId, APP_VERSION, IS_DEMO_MODE } from './config/firebase';
 import { formatCurrency } from './utils/formatters';
 import { useI18n } from './i18n/I18nContext';
-import { householdSignOut } from './services/householdAuth';
+import { familySignOut } from './services/familyAuth';
 
 // --- CUSTOM HOOK (all Firestore data) ---
 import { useAppData } from './hooks/useAppData';
@@ -105,10 +105,10 @@ async function migrateFromDemo(user, firestoreDb, firestoreAppId, rawJson = null
 export default function App() {
   const { t } = useI18n();
   const [user, setUser]         = useState(null);
-  // ── Household state (from PIN/Password login) ──────────────
-  const [household, setHousehold] = useState(() => {
+  // ── Family user state (from PIN login) ───────────────────────
+  const [familyUser, setFamilyUser] = useState(() => {
     try {
-      const saved = localStorage.getItem('dkHousehold');
+      const saved = localStorage.getItem('dkFamilyUser');
       return saved ? JSON.parse(saved) : null;
     } catch { return null; }
   });
@@ -137,7 +137,7 @@ export default function App() {
   const mainRef     = useRef(null);
 
   // ── All remote data from custom hook ───────────────────────
-  const dataOwnerId = household?.householdId || user?.uid;
+  const dataOwnerId = familyUser?.uid || user?.uid;
   const { transactions, investments, categories, investTypes, wallets, subscriptions, savingsGoals, dataLoading } =
     useAppData(dataOwnerId, refreshKey);
 
@@ -149,7 +149,7 @@ export default function App() {
 
   // ── Detect leftover demo data after login ───────────────────
   useEffect(() => {
-    if ((!user && !household) || IS_DEMO_MODE) return;
+    if ((!user && !familyUser) || IS_DEMO_MODE) return;
     try {
       const raw = localStorage.getItem(DEMO_STORE_KEY);
       if (!raw) return;
@@ -206,20 +206,18 @@ export default function App() {
   }, []);
   // ── Auth ────────────────────────────────────────────────────
   const handleLogin  = () => signInWithPopup(auth, new GoogleAuthProvider()).catch(e => alert(e.message));
-  const handleHouseholdLogin = useCallback((householdData) => {
-    // authUid comes from the household auth service (anonymous Firebase UID)
-    const data = { ...householdData };
-    setHousehold(data);
-    localStorage.setItem('dkHousehold', JSON.stringify(data));
+  const handleFamilyLogin = useCallback((familyData) => {
+    setFamilyUser(familyData);
+    localStorage.setItem('dkFamilyUser', JSON.stringify(familyData));
     setRefreshKey(k => k + 1);
   }, []);
   const handleLogout = useCallback(() => {
-    if (household) {
-      setHousehold(null);
-      localStorage.removeItem('dkHousehold');
+    if (familyUser) {
+      setFamilyUser(null);
+      localStorage.removeItem('dkFamilyUser');
     }
-    householdSignOut().catch(console.error);
-  }, [household]);
+    familySignOut().catch(console.error);
+  }, [familyUser]);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, u => { setUser(u); setAuthLoading(false); });
@@ -274,7 +272,7 @@ export default function App() {
     const currentMonth = today.getMonth();
     const currentYear  = today.getFullYear();
     const daysInMonth  = (y, m) => new Date(y, m + 1, 0).getDate();
-    const baseFn       = () => collection(db, 'artifacts', appId, 'households', dataOwnerId, 'transactions');
+    const baseFn       = () => collection(db, 'artifacts', appId, 'users', dataOwnerId, 'transactions');
 
     (async () => {
       for (const sub of subscriptions) {
@@ -342,11 +340,11 @@ export default function App() {
       {t('common.loadingApp')}
     </div>
   );
-  if (!user && !household) return (
-    <LoginPage onLogin={handleLogin} onHouseholdLogin={handleHouseholdLogin} isLoading={false} />
+  if (!user && !familyUser) return (
+    <LoginPage onLogin={handleLogin} onFamilyLogin={handleFamilyLogin} isLoading={false} />
   );
 
-  const uid   = user?.uid || 'household';
+  const uid   = user?.uid || familyUser?.uid || 'pin';
   const wBals = summary.walletBalances;
 
   return (
@@ -378,6 +376,7 @@ export default function App() {
         activeTab={isAIOpen ? 'ai-advisor' : activeTab}
         setActiveTab={handleTabChange}
         user={user}
+        familyUser={familyUser}
         privacyMode={privacyMode}
         setPrivacyMode={setPrivacyMode}
         darkMode={darkMode}
@@ -568,7 +567,7 @@ export default function App() {
           {(activeTab === 'budget'               || activeTab === 'salary-allocator')           && <SalaryAllocatorView       categories={categories} wallets={wBals} transactions={transactions} userId={uid} appId={appId} fmt={fmt} />}
           {activeTab === 'zakat'                                                                && <ZakatView                 summary={summary} investments={investments} fmt={fmt} />}
           {activeTab === 'savings-goals'                                                        && <SavingsGoalView          savingsGoals={savingsGoals} wallets={wBals} userId={uid} appId={appId} fmt={fmt} />}
-          {activeTab === 'kids'                                                                 && <AnakView                  dataOwnerId={dataOwnerId} ownerType={household?.householdId ? 'households' : 'users'} appId={appId} />}
+          {activeTab === 'kids'                                                                 && <AnakView                  dataOwnerId={dataOwnerId} ownerType="users" appId={appId} />}
           {activeTab === 'categories'                                                           && <CategoryView              categories={categories} userId={uid} appId={appId} fmt={fmt} />}
 
           {/* Modals */}

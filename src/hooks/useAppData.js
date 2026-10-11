@@ -52,14 +52,9 @@ export function useAppData(dataOwnerId, refreshKey = 0) {
       return;
     }
 
-    // Determine Firestore data path:
-    // - household mode: artifacts/{appId}/households/{householdId}/...
-    // - google mode:    artifacts/{appId}/users/{userId}/...
-    // We detect household mode by checking if the ID looks like a Firestore doc ID (alphanumeric, hyphens, 20 chars)
-    const isHousehold = !dataOwnerId.includes('@'); // heuristic: Google UID often has @, household IDs don't
-    const colPath = isHousehold
-      ? ['artifacts', appId, 'households', dataOwnerId]
-      : ['artifacts', appId, 'users', dataOwnerId];
+    // All users (Google + PIN login) now share the same path:
+    // artifacts/{appId}/users/{uid}/...
+    const colPath = ['artifacts', appId, 'users', dataOwnerId];
 
     // Reset seed guards on every subscription cycle
     walletsInit.current    = false;

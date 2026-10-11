@@ -104,8 +104,14 @@ const NavGroup = ({ group, activeTab, onSelect, t }) => {
 
 // â”€â”€â”€ Desktop Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-const Sidebar = ({ activeTab, setActiveTab, user, privacyMode, setPrivacyMode, darkMode, setDarkMode, onLogout }) => {
+const Sidebar = ({ activeTab, setActiveTab, user, familyUser, privacyMode, setPrivacyMode, darkMode, setDarkMode, onLogout }) => {
   const { t, lang, setLang } = useI18n();
+
+  // Compute display info: Google user > PIN family user
+  const isGoogleUser = !!user?.uid;
+  const isFamilyUser = !!familyUser?.uid;
+  const displayName  = user?.displayName || familyUser?.name || t('sidebar.user');
+  const displayRole  = familyUser?.role ? t(`auth.role.${familyUser.role}`) : null;
 
   return (
     <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-64 flex-col bg-slate-50 dark:bg-gray-900 border-r border-green-100 dark:border-gray-700/50 z-50">
@@ -177,7 +183,7 @@ const Sidebar = ({ activeTab, setActiveTab, user, privacyMode, setPrivacyMode, d
           >EN</button>
         </div>
         <div className="flex items-center gap-2.5">
-          {user.photoURL ? (
+        {user?.photoURL ? (
             <img src={user.photoURL} alt="User" className="w-9 h-9 rounded-full border-2 border-primary/20 shrink-0" />
           ) : (
             <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
@@ -186,10 +192,13 @@ const Sidebar = ({ activeTab, setActiveTab, user, privacyMode, setPrivacyMode, d
           )}
           <div className="flex-1 overflow-hidden">
             <p className="text-sm font-semibold text-on-surface dark:text-gray-200 truncate leading-tight">
-              {user.displayName || t('sidebar.user')}
+            {displayName}
             </p>
-            <p className="text-[11px] text-slate-400 truncate leading-tight">{user.email}</p>
-          </div>
+          {displayRole
+            ? <span className="inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">{displayRole}</span>
+            : <p className="text-[11px] text-slate-400 truncate leading-tight">{user?.email}</p>
+          }
+        </div>
           <div className="flex gap-0.5">
             <button
               onClick={() => setPrivacyMode(!privacyMode)}
@@ -269,8 +278,11 @@ export const MobileMenu = ({ activeTab, setActiveTab, user, onLogout, onClose })
                 </div>
               )}
               <div className="overflow-hidden">
-                <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{user.displayName || t('sidebar.user')}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
+                <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{displayName}</p>
+                {displayRole
+                  ? <span className="inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">{displayRole}</span>
+                  : <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
+                }
               </div>
             </div>
           )}
