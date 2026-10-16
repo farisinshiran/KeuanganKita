@@ -57,3 +57,9 @@ credentials.json
 .tmp
 .temp
 Thumbs.db
+
+# Claude / AI agent local configuration (contains API keys, keep local only)
+.claude/settings.json
+
+# Temporary git backup (created during history rewrite, safe to delete)
+.git.backup/
