@@ -137,7 +137,7 @@ export default function App() {
   const mainRef     = useRef(null);
 
   // ── All remote data from custom hook ───────────────────────
-  const dataOwnerId = familyUser?.uid || user?.uid;
+  const dataOwnerId = familyUser?.anonUid || user?.uid;
   const { transactions, investments, categories, investTypes, wallets, subscriptions, savingsGoals, dataLoading } =
     useAppData(dataOwnerId, refreshKey);
 
@@ -344,7 +344,7 @@ export default function App() {
     <LoginPage onLogin={handleLogin} onFamilyLogin={handleFamilyLogin} isLoading={false} />
   );
 
-  const uid   = user?.uid || familyUser?.uid || 'pin';
+  const uid   = user?.uid || familyUser?.anonUid || 'pin';
   const wBals = summary.walletBalances;
 
   return (
@@ -444,6 +444,7 @@ export default function App() {
           activeTab={isAIOpen ? 'ai-advisor' : activeTab}
           setActiveTab={handleTabChange}
           user={user}
+          familyUser={familyUser}
           onLogout={handleLogout}
           onClose={() => setIsMobileMenuOpen(false)}
         />
@@ -495,12 +496,12 @@ export default function App() {
         )}
 
         Restore panel: shown when Firestore is empty after loading
-        {!IS_DEMO_MODE && !dataLoading && transactions.length === 0 && demoMigration === null && (
+        {/* {!IS_DEMO_MODE && !dataLoading && transactions.length === 0 && demoMigration === null && (
           <div className="mb-4 -mx-4 md:-mx-8 -mt-4 md:-mt-8 px-4 py-2.5 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-center gap-2 text-xs text-gray-500 dark:text-gray-400">
             <span>Punya data dari browser lain atau domain lama?</span>
             <button onClick={() => setShowManualImport(true)} className="text-blue-600 dark:text-blue-400 underline font-semibold">Pulihkan data lama</button>
           </div>
-        )}
+        )} */}
 
         {/* Manual import modal */}
         {showManualImport && (
@@ -536,20 +537,32 @@ export default function App() {
         )}
 
         {/* Mobile top-bar */}
-        <div className="md:hidden flex justify-between items-center mb-6">
+        <div className="md:hidden flex justify-between items-center mb-6 -mx-4 px-4 pt-1">
           <div className="flex items-center gap-2 text-pink-600 dark:text-pink-300">
             <Wallet className="w-6 h-6" />
             <h1 className="font-bold text-lg">{t('common.appName')}</h1>
           </div>
-          <div className="flex items-center gap-4">
-            <button onClick={() => setPrivacyMode(p => !p)} className="text-gray-400 hover:text-pink-400 dark:hover:text-pink-300">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPrivacyMode(p => !p)}
+              className="min-w-[44px] min-h-[44px] p-2.5 flex items-center justify-center text-gray-400 hover:text-pink-400 dark:hover:text-pink-300 rounded-lg transition-colors"
+              aria-label={privacyMode ? t('sidebar.showBalance') : t('sidebar.hideBalance')}
+            >
               {privacyMode ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
-            <button onClick={() => setDarkMode(d => !d)} className="text-gray-400 hover:text-amber-500">
+            <button
+              onClick={() => setDarkMode(d => !d)}
+              className="min-w-[44px] min-h-[44px] p-2.5 flex items-center justify-center text-gray-400 hover:text-amber-500 rounded-lg transition-colors"
+              aria-label={t('sidebar.switchTheme')}
+            >
               {darkMode ? <Sun size={20} /> : <Moon size={20} />}
             </button>
-            <button onClick={() => setIsMobileMenuOpen(true)} className="text-gray-400 hover:text-pink-400 dark:hover:text-pink-300">
-              <Menu size={24} />
+            <button
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="min-w-[44px] min-h-[44px] p-2.5 flex items-center justify-center text-gray-400 hover:text-pink-400 dark:hover:text-pink-300 rounded-lg transition-colors"
+              aria-label={t('sidebar.openMenu') || 'Open menu'}
+            >
+              <Menu size={22} />
             </button>
           </div>
         </div>

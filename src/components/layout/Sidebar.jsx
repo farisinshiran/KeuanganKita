@@ -247,27 +247,37 @@ const MobileNavItem = ({ id, iconName, label, active, onSelect }) => {
   );
 };
 
-export const MobileMenu = ({ activeTab, setActiveTab, user, onLogout, onClose }) => {
+export const MobileMenu = ({ activeTab, setActiveTab, user, familyUser, onLogout, onClose }) => {
   const { t, lang, setLang } = useI18n();
   const handleItemClick = (id) => { setActiveTab(id); onClose(); };
 
+  // Compute display info: Google user > PIN family user
+  const isGoogleUser  = !!user?.uid;
+  const isFamilyUser  = !!familyUser?.uid;
+  const displayName   = user?.displayName || familyUser?.name || t('sidebar.user');
+  const displayRole   = familyUser?.role ? t(`auth.role.${familyUser.role}`) : null;
+
   return (
-    <div className="md:hidden fixed inset-0 bg-black/50 z-40" onClick={onClose}>
+    <div className="md:hidden fixed inset-0 bg-black/50 z-[60]" onClick={onClose}>
       <div
-        className="fixed right-0 top-0 bottom-0 w-72 bg-white dark:bg-gray-800 shadow-2xl z-50 overflow-y-auto flex flex-col"
+        className="fixed right-0 top-0 bottom-0 w-72 max-w-[85vw] bg-white dark:bg-gray-800 shadow-2xl z-[70] overflow-y-auto flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="p-5 border-b border-gray-100 dark:border-gray-700 shrink-0">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="font-extrabold text-lg text-green-800 dark:text-green-400">{t('common.appName')}</h2>
+                  <div className="flex justify-between items-center gap-2">
+                    <div className="min-w-0">
+                      <h2 className="font-extrabold text-lg text-green-800 dark:text-green-400 truncate">{t('common.appName')}</h2>
               <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Family Legacy</p>
             </div>
-            <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
-              <Icon name="close" size={22} />
-            </button>
-          </div>
+                    <button
+                      onClick={onClose}
+                      aria-label={t('sidebar.closeMenu') || 'Close menu'}
+                      className="min-w-[44px] min-h-[44px] p-2.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-center transition-colors"
+                    >
+                      <Icon name="close" size={22} />
+                    </button>
+                  </div>
           {user && (
             <div className="flex items-center gap-2.5 mt-3">
               {user.photoURL ? (

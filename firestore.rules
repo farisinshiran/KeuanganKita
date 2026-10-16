@@ -3,33 +3,42 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // All app data lives under artifacts/{appId}/users/{uid}/
-    // UID comes from anonymous Firebase Auth (used by both Google login and PIN login).
-    // - Google login: uid = Firebase Auth user.uid
-    // - PIN login:    uid = hash(name + role + familyId) stored in familyAuth.js
-    //
-    // Each family shares the same familyId but has unique uids per member.
-    match /artifacts/{appId}/users/{uid}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+    // ── App data: artifacts/{appId}/users/{anonUid}/... ─────────
+    // anonUid = Firebase anonymous auth UID (used by PIN login AND Google login)
+    // request.auth.uid == anonUid → rules always pass
+    match /artifacts/{appId}/users/{anonUid}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == anonUid;
     }
 
-    // User settings (including Vision API key)
-    match /artifacts/{appId}/users/{uid}/settings/{settingId} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+    // User settings
+    match /artifacts/{appId}/users/{anonUid}/settings/{settingId} {
+      allow read, write: if request.auth != null && request.auth.uid == anonUid;
     }
 
-    // Kids feature: same access as the parent namespace
-    match /artifacts/{appId}/users/{uid}/kids/{kidId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+    // Kids feature
+    match /artifacts/{appId}/users/{anonUid}/kids/{kidId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == anonUid;
     }
 
-    // Legacy household path — deprecated, kept for data migration only.
-    // New data should NOT be written here.
+    // ── Family groups: families/{familyId} ─────────────────────
+    // All members of a family can read the family doc (to get familyId, members list)
+    // Only the creator can write the family metadata
+    match /families/{familyId} {
+      allow read:   if request.auth != null &&
+                     request.auth.uid in resource.data.members;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null &&
+                     request.auth.uid == resource.data.createdBy;
+      allow delete: if request.auth != null &&
+                     request.auth.uid == resource.data.createdBy;
+    }
+
+    // ── Legacy household paths — deny all (deprecated) ─────────
     match /households/{householdId} {
-      allow read, write: if false; // deny all — no new household data
+      allow read, write: if false;
     }
     match /artifacts/{appId}/households/{householdId}/{document=**} {
-      allow read, write: if false; // deny all — no new household data
+      allow read, write: if false;
     }
   }
 }

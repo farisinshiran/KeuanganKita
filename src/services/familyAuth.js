@@ -6,11 +6,15 @@
  *   1. Pilih peran (ayah | ibu | anak)
  *   2. Masukkan nama + PIN 6 digit
  *   3. Lookup: users WHERE name == X AND role == Y
- *   4. Verify PIN → return { uid, name, role, familyId, dob }
+ *   4. Verify PIN → return { appUid, name, role, familyId, dob }
  *
- * Data path di Firestore (selalu 'users', tanpa 'households'):
- *   users/{uid}          — profil anggota keluarga
- *   families/{familyId}   — grup keluarga (members: uid[])
+ * Firestore path:
+ *   users/{anonUid}             — Firestore doc ID = Firebase anonymous auth UID
+ *   users/{anonUid}/...         — subcollections (transactions, wallets, etc.)
+ *   families/{familyId}         — grup keluarga (members: anonUid[])
+ *
+ * CRITICAL: request.auth.uid (Firebase anonymous UID) = document ID di Firestore.
+ * App-level uid (appUid = role_name_timestamp) hanya untuk display/logic.
  *
  * Dummy accounts (di-seed otomatis):
  *   Faris   (ayah)  PIN 111111
@@ -28,9 +32,9 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 
-const USERS_COL   = 'users';
+const USERS_COL    = 'users';
 const FAMILIES_COL = 'families';
-const FAMILY_NAME = 'Keluarga Faris';
+const FAMILY_NAME  = 'Keluarga Faris';
 
 // ── Role constants ─────────────────────────────────────────────
 export const ROLES = Object.freeze({
@@ -123,18 +127,30 @@ export async function seedDummyAccounts() {
     }
   }
 
-  // Seed each dummy account (idempotent)
+  // ── Seed each dummy account (idempotent, per-anon-uid) ──
   for (const acc of DUMMY_ACCOUNTS) {
     const existing = await findUserByNameAndRole(acc.name, acc.role);
-    if (existing) continue; // already seeded
+    if (existing) {
+      // If existing doc has no anonUid yet, update it so rules work
+      if (!existing.anonUid) {
+        await updateDoc(doc(db, USERS_COL, existing.id), {
+          anonUid: user.uid,
+        });
+      }
+      continue;
+    }
 
-    const uid   = `${acc.role}_${acc.name.toLowerCase()}_${Date.now()}`;
+    // Build appUid for this account
+    const appUid  = `${acc.role}_${acc.name.toLowerCase()}_${Date.now()}`;
     const pinHash = await sha256(acc.pin);
 
-    await setDoc(doc(db, USERS_COL, uid), {
+    // Document ID = Firebase anonymous auth UID (so Firestore rules pass)
+    await setDoc(doc(db, USERS_COL, user.uid), {
+      appUid,
       name:     acc.name,
       role:     acc.role,
       pinHash,
+      anonUid:  user.uid,
       dob:      acc.dob,
       familyId,
       createdAt:    serverTimestamp(),
@@ -142,9 +158,9 @@ export async function seedDummyAccounts() {
       isDummy:      true,
     });
 
-    // Add to family members
+    // Add anonUid to family members list
     await updateDoc(doc(db, FAMILIES_COL, familyId), {
-      members: arrayUnion(uid),
+      members: arrayUnion(user.uid),
     });
   }
 }
@@ -155,7 +171,7 @@ export async function signInWithPin({ name, role, pin }) {
   if (!Object.values(ROLES).includes(role)) throw new Error('Peran tidak valid.');
   if (!isValidPin(pin)) throw new Error('PIN harus 6 digit angka.');
 
-  // Try to find existing account
+  // Try to find existing account by name + role
   let found = await findUserByNameAndRole(name, role);
 
   // Auto-seed dummy accounts on first login attempt
@@ -174,20 +190,29 @@ export async function signInWithPin({ name, role, pin }) {
     throw new Error('PIN salah. Coba lagi.');
   }
 
-  // Ensure Firebase anon auth
-  await ensureAnonUser();
+  // Ensure Firebase anonymous auth — this is what Firestore rules check
+  const anonUser = await ensureAnonUser();
 
-  // Update last login
-  await updateDoc(doc(db, USERS_COL, found.id), {
+  // Store appUid in user doc (doc ID = anonUid so rules pass)
+  await setDoc(doc(db, USERS_COL, anonUser.uid), {
+    appUid:    found.appUid || found.id, // fallback for docs created before anonUid fix
+    name:      found.name,
+    role:      found.role,
+    pinHash:   found.pinHash,
+    anonUid:   anonUser.uid,
+    familyId:  found.familyId,
+    dob:       found.dob || null,
+    isDummy:   found.isDummy || false,
     lastLoginAt: serverTimestamp(),
-  });
+  }, { merge: true });
 
   return {
-    uid:      found.id,
-    name:     found.name,
-    role:     found.role,
-    familyId: found.familyId,
-    dob:      found.dob || null,
+    appUid:    found.appUid || found.id,
+    anonUid:   anonUser.uid,
+    name:      found.name,
+    role:      found.role,
+    familyId:  found.familyId,
+    dob:       found.dob || null,
     isNewUser: false,
   };
 }
