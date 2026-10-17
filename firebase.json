@@ -6,6 +6,7 @@
     "indexes": "firestore.indexes.json"
   },
   "hosting": {
+    "site": "keuangan-kita-d97b9",
     "public": "dist",
     "ignore": [
       "firebase.json",
