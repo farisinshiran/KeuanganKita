@@ -4,7 +4,7 @@ import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from
 import { collection, addDoc, serverTimestamp, doc, writeBatch } from 'firebase/firestore';
 
 // --- CONFIG & UTILS ---
-import { auth, db, appId, APP_VERSION, IS_DEMO_MODE } from './config/firebase';
+import { auth, db, appId, IS_DEMO_MODE } from './config/firebase';
 import { formatCurrency } from './utils/formatters';
 import { useI18n } from './i18n/I18nContext';
 import { familySignOut } from './services/familyAuth';
@@ -14,7 +14,7 @@ import { useAppData } from './hooks/useAppData';
 
 // --- LAYOUT & UI (always needed, eagerly imported) ---
 import LoginPage from './components/ui/LoginPage';
-import Sidebar, { MobileMenu, AppFooter, NAV_ITEMS } from './components/layout/Sidebar';
+import Sidebar, { MobileMenu, NAV_ITEMS } from './components/layout/Sidebar';
 import AIAdvisorPanel from './components/layout/AIAdvisorPanel';
 
 // --- LAZY-LOADED VIEWS (downloaded only when first visited) ---
@@ -592,7 +592,6 @@ export default function App() {
           )}
         </Suspense>
 
-        <AppFooter APP_VERSION={APP_VERSION} />
       </main>
 
       {/* ── AI Advisor Panel (always available, collapsible right sidebar) ── */}
