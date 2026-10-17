@@ -103,14 +103,9 @@ const NavGroup = ({ group, activeTab, onSelect, t }) => {
 
 // â”€â”€â”€ Desktop Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-const Sidebar = ({ activeTab, setActiveTab, user, familyUser, privacyMode, setPrivacyMode, darkMode, setDarkMode, onLogout }) => {
+const Sidebar = ({ activeTab, setActiveTab, user, privacyMode, setPrivacyMode, darkMode, setDarkMode, onLogout }) => {
   const { t, lang, setLang } = useI18n();
-
-  // Compute display info: Google user > PIN family user
-  const isGoogleUser = !!user?.uid;
-  const isFamilyUser = !!familyUser?.uid;
-  const displayName  = user?.displayName || familyUser?.name || t('sidebar.user');
-  const displayRole  = familyUser?.role ? t(`auth.role.${familyUser.role}`) : null;
+  const displayName = user?.displayName || user?.email || t('sidebar.user');
 
   return (
     <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-64 flex-col bg-slate-50 dark:bg-gray-900 border-r border-green-100 dark:border-gray-700/50 z-50">
@@ -193,10 +188,7 @@ const Sidebar = ({ activeTab, setActiveTab, user, familyUser, privacyMode, setPr
             <p className="text-sm font-semibold text-on-surface dark:text-gray-200 truncate leading-tight">
             {displayName}
             </p>
-          {displayRole
-            ? <span className="inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">{displayRole}</span>
-            : <p className="text-[11px] text-slate-400 truncate leading-tight">{user?.email}</p>
-          }
+            <p className="text-[11px] text-slate-400 truncate leading-tight">{user?.email}</p>
         </div>
           <div className="flex gap-0.5">
             <button
@@ -246,15 +238,11 @@ const MobileNavItem = ({ id, iconName, label, active, onSelect }) => {
   );
 };
 
-export const MobileMenu = ({ activeTab, setActiveTab, user, familyUser, onLogout, onClose }) => {
+export const MobileMenu = ({ activeTab, setActiveTab, user, onLogout, onClose }) => {
   const { t, lang, setLang } = useI18n();
   const handleItemClick = (id) => { setActiveTab(id); onClose(); };
 
-  // Compute display info: Google user > PIN family user
-  const isGoogleUser  = !!user?.uid;
-  const isFamilyUser  = !!familyUser?.uid;
-  const displayName   = user?.displayName || familyUser?.name || t('sidebar.user');
-  const displayRole   = familyUser?.role ? t(`auth.role.${familyUser.role}`) : null;
+  const displayName = user?.displayName || user?.email || t('sidebar.user');
 
   return (
     <div className="md:hidden fixed inset-0 bg-black/50 z-[60]" onClick={onClose}>
@@ -288,10 +276,7 @@ export const MobileMenu = ({ activeTab, setActiveTab, user, familyUser, onLogout
               )}
               <div className="overflow-hidden">
                 <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{displayName}</p>
-                {displayRole
-                  ? <span className="inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">{displayRole}</span>
-                  : <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
-                }
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
               </div>
             </div>
           )}

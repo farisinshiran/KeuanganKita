@@ -7,7 +7,6 @@ import { collection, addDoc, serverTimestamp, doc, writeBatch } from 'firebase/f
 import { auth, db, appId, IS_DEMO_MODE } from './config/firebase';
 import { formatCurrency } from './utils/formatters';
 import { useI18n } from './i18n/I18nContext';
-import { familySignOut } from './services/familyAuth';
 
 // --- CUSTOM HOOK (all Firestore data) ---
 import { useAppData } from './hooks/useAppData';
@@ -105,13 +104,6 @@ async function migrateFromDemo(user, firestoreDb, firestoreAppId, rawJson = null
 export default function App() {
   const { t } = useI18n();
   const [user, setUser]         = useState(null);
-  // ── Family user state (from PIN login) ───────────────────────
-  const [familyUser, setFamilyUser] = useState(() => {
-    try {
-      const saved = localStorage.getItem('dkFamilyUser');
-      return saved ? JSON.parse(saved) : null;
-    } catch { return null; }
-  });
   const [authLoading, setAuthLoading] = useState(true);
   const [activeTab, setActiveTab]     = useState('dashboard');
   const [privacyMode, setPrivacyMode] = useState(false);
@@ -137,7 +129,7 @@ export default function App() {
   const mainRef     = useRef(null);
 
   // ── All remote data from custom hook ───────────────────────
-  const dataOwnerId = familyUser?.anonUid || user?.uid;
+  const dataOwnerId = user?.uid;
   const { transactions, investments, categories, investTypes, wallets, subscriptions, savingsGoals, dataLoading } =
     useAppData(dataOwnerId, refreshKey);
 
@@ -149,7 +141,7 @@ export default function App() {
 
   // ── Detect leftover demo data after login ───────────────────
   useEffect(() => {
-    if ((!user && !familyUser) || IS_DEMO_MODE) return;
+    if (!user || IS_DEMO_MODE) return;
     try {
       const raw = localStorage.getItem(DEMO_STORE_KEY);
       if (!raw) return;
@@ -206,21 +198,17 @@ export default function App() {
   }, []);
   // ── Auth ────────────────────────────────────────────────────
   const handleLogin  = () => signInWithPopup(auth, new GoogleAuthProvider()).catch(e => alert(e.message));
-  const handleFamilyLogin = useCallback((familyData) => {
-    setFamilyUser(familyData);
-    localStorage.setItem('dkFamilyUser', JSON.stringify(familyData));
-    setRefreshKey(k => k + 1);
-  }, []);
-  const handleLogout = useCallback(() => {
-    if (familyUser) {
-      setFamilyUser(null);
-      localStorage.removeItem('dkFamilyUser');
-    }
-    familySignOut().catch(console.error);
-  }, [familyUser]);
+  const handleLogout = useCallback(() => signOut(auth).catch(console.error), []);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, u => { setUser(u); setAuthLoading(false); });
+    const unsub = onAuthStateChanged(auth, u => {
+      if (u?.isAnonymous) {
+        setUser(null);
+      } else {
+        setUser(u);
+      }
+      setAuthLoading(false);
+    });
     return unsub;
   }, []);
 
@@ -340,11 +328,11 @@ export default function App() {
       {t('common.loadingApp')}
     </div>
   );
-  if (!user && !familyUser) return (
-    <LoginPage onLogin={handleLogin} onFamilyLogin={handleFamilyLogin} isLoading={false} />
+  if (!user) return (
+    <LoginPage onLogin={handleLogin} isLoading={false} />
   );
 
-  const uid   = user?.uid || familyUser?.anonUid || 'pin';
+  const uid   = user.uid;
   const wBals = summary.walletBalances;
 
   return (
@@ -376,7 +364,6 @@ export default function App() {
         activeTab={isAIOpen ? 'ai-advisor' : activeTab}
         setActiveTab={handleTabChange}
         user={user}
-        familyUser={familyUser}
         privacyMode={privacyMode}
         setPrivacyMode={setPrivacyMode}
         darkMode={darkMode}
@@ -444,7 +431,6 @@ export default function App() {
           activeTab={isAIOpen ? 'ai-advisor' : activeTab}
           setActiveTab={handleTabChange}
           user={user}
-          familyUser={familyUser}
           onLogout={handleLogout}
           onClose={() => setIsMobileMenuOpen(false)}
         />

@@ -52,7 +52,7 @@ export function useAppData(dataOwnerId, refreshKey = 0) {
       return;
     }
 
-    // All users (Google + PIN login) now share the same path:
+    // Google and email/password accounts share the same per-UID path:
     // artifacts/{appId}/users/{uid}/...
     const colPath = ['artifacts', appId, 'users', dataOwnerId];
 

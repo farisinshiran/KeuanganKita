@@ -81,7 +81,7 @@
 | **Education Fund** | Dedicated savings planner for education costs |
 | **Income Diversification** | Track multiple income streams |
 | **Salary Slip Archive** | Store and parse payslip PDFs |
-| **Google Sign-In** | Firebase Auth — one-click, no passwords |
+| **Authentication** | Firebase Auth — Google or email/password accounts |
 | **Real-time sync** | `onSnapshot` Firestore listeners |
 | **Mobile-first** | Responsive layout with pull-to-refresh |
 
@@ -96,7 +96,7 @@
 | Framework | React 19 + Vite 7 |
 | Styling | Tailwind CSS v3 |
 | Database | Firebase Firestore (real-time) |
-| Auth | Firebase Authentication (Google OAuth 2.0) |
+| Auth | Firebase Authentication (Google OAuth 2.0 and email/password) |
 | Charts | Recharts |
 | Icons | Material Symbols Outlined (variable font) |
 | Design System | Material Design 3 color tokens via Tailwind CSS |
@@ -140,11 +140,12 @@ VITE_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
 VITE_APP_ID=keuangan-kita     # Must match the segment after /artifacts/ in Firestore
 ```
 
-### 3. Enable Google Sign-In
+### 3. Enable Firebase sign-in methods
 
 1. Firebase Console → **Authentication → Sign-in method**
-2. Enable **Google**
-3. Add `http://localhost:5173` to **Authorized domains**
+2. Enable **Email/Password** to support account registration, sign-in, and password resets.
+3. Enable **Google** if you also want to offer Google Sign-In.
+4. Add `http://localhost:5173` to **Authorized domains**.
 
 ### 4. Deploy Firestore security rules
 
@@ -163,11 +164,11 @@ Or paste the contents of [`firestore.rules`](firestore.rules) manually in the Fi
 > `VITE_APP_ID=keuangan-kita`. The app scopes Google-authenticated data by Firebase Auth UID;
 > changing this value creates a separate, empty namespace.
 >
-> **PIN login:** the current PIN services query/write top-level `/users` and `/families`, while
-> the rules intentionally do not expose `/users` (which would reveal PIN hashes to other users).
-> Google Sign-In and per-user app data are the supported Firebase path with these rules. Do not
-> add public read access to `/users` to make PIN login work; move PIN verification to a trusted
-> backend (for example, a Firebase callable function) before enabling that flow in production.
+> **Authentication:** the app supports Google Sign-In and Firebase email/password accounts. The
+> former PIN login is no longer available in the app. Do not enable it by granting public read
+> access to `/users`; legacy PIN records may contain password hashes and should not be exposed.
+> If this browser still has the previous anonymous PIN session, creating an email/password account
+> links credentials to that same Firebase UID so its existing per-user data remains attached.
 
 ### 5. Run locally
 

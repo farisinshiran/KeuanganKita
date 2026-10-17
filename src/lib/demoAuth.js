@@ -13,12 +13,28 @@ const DEMO_USER = {
 export const getAuth = () => ({ currentUser: DEMO_USER });
 
 export class GoogleAuthProvider {}
+export class EmailAuthProvider {
+  static credential() {
+    return {};
+  }
+}
 
 /** In demo mode sign-in is instant — the user is already "logged in". */
 export const signInAnonymously = async () => ({ user: DEMO_USER });
 
 /** Sign-in is a no-op in demo mode (already "logged in"). */
 export const signInWithPopup = async () => ({ user: DEMO_USER });
+
+const unavailableEmailAuth = () => {
+  const error = new Error('Email/password authentication is unavailable in demo mode.');
+  error.code = 'auth/operation-not-allowed';
+  return Promise.reject(error);
+};
+
+export const createUserWithEmailAndPassword = unavailableEmailAuth;
+export const linkWithCredential = unavailableEmailAuth;
+export const signInWithEmailAndPassword = unavailableEmailAuth;
+export const sendPasswordResetEmail = unavailableEmailAuth;
 
 /** Sign-out is a no-op in demo mode. */
 export const signOut = async () => {};
