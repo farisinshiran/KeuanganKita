@@ -30,7 +30,7 @@ const auth = getAuth(app);
 const db   = getFirestore(app);
 
 // Firestore path namespace -- change to match your project
-const appId = import.meta.env.VITE_APP_ID || 'dompet-keluarga';
+const appId = import.meta.env.VITE_APP_ID || 'keuangan-kita';
 
 // App version
 const APP_VERSION = '3.2.0';

@@ -137,7 +137,7 @@ VITE_FIREBASE_STORAGE_BUCKET=my-project.firebasestorage.app
 VITE_FIREBASE_MESSAGING_SENDER_ID=123456789
 VITE_FIREBASE_APP_ID=1:123456789:web:abc123
 VITE_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
-VITE_APP_ID=dompet-keluarga   # Firestore root namespace — change freely
+VITE_APP_ID=keuangan-kita     # Must match the segment after /artifacts/ in Firestore
 ```
 
 ### 3. Enable Google Sign-In
@@ -153,11 +153,21 @@ VITE_APP_ID=dompet-keluarga   # Firestore root namespace — change freely
 npm install -g firebase-tools
 firebase login
 
-# Copy .env.example to .firebaserc (fill in your project ID), then:
-firebase deploy --only firestore:rules
+# Replace with the Firebase project ID used in .env.local:
+firebase deploy --only firestore:rules --project your-project-id
 ```
 
 Or paste the contents of [`firestore.rules`](firestore.rules) manually in the Firebase Console.
+
+> **Existing Firestore data:** if the Console path is `artifacts/keuangan-kita/users/{UID}`, keep
+> `VITE_APP_ID=keuangan-kita`. The app scopes Google-authenticated data by Firebase Auth UID;
+> changing this value creates a separate, empty namespace.
+>
+> **PIN login:** the current PIN services query/write top-level `/users` and `/families`, while
+> the rules intentionally do not expose `/users` (which would reveal PIN hashes to other users).
+> Google Sign-In and per-user app data are the supported Firebase path with these rules. Do not
+> add public read access to `/users` to make PIN login work; move PIN verification to a trusted
+> backend (for example, a Firebase callable function) before enabling that flow in production.
 
 ### 5. Run locally
 
@@ -210,7 +220,7 @@ For a fully functional deployment where each user has their own cloud-synced dat
    | `VITE_FIREBASE_MESSAGING_SENDER_ID` | Sender ID |
    | `VITE_FIREBASE_APP_ID` | App ID |
    | `VITE_FIREBASE_MEASUREMENT_ID` | `G-XXXXXXXXXX` |
-   | `VITE_APP_ID` | `dompet-keluarga` |
+   | `VITE_APP_ID` | `keuangan-kita` (must match the existing `artifacts/{appId}` path) |
 
 4. **Push to `main`** → the [deploy workflow](.github/workflows/deploy.yml) builds and publishes automatically.
 
@@ -367,5 +377,3 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 Made with ❤️ for Indonesian families
 
 </div>
-
-
