@@ -354,25 +354,25 @@ export const MobileMenu = ({ activeTab, setActiveTab, user, familyUser, onLogout
 export const AppFooter = ({ APP_VERSION }) => {
   const { t } = useI18n();
   return (
-    <footer className="mt-auto pt-10 pb-4 text-center space-y-2">
-      <div className="flex items-center justify-center gap-2 text-xs text-gray-400 dark:text-gray-600">
-        <span>
-          &copy; {new Date().getFullYear()} {t('common.appName')} â€” oleh{' '}
-          <span className="text-green-600 dark:text-green-500 font-medium">@fauzanalfi</span>
-        </span>
-      </div>
-      <div className="flex items-center justify-center gap-3 text-xs text-gray-400 dark:text-gray-600">
-        <span className="flex items-center gap-1">
-          <Icon name="smart_toy" size={12} />
-          {t('sidebar.parser')} v{APP_VERSION}
-        </span>
-        <span>â€¢</span>
-        <span className="flex items-center gap-1">
-          <RefreshCw size={12} />
-          {t('sidebar.pullRefresh')}
-        </span>
-      </div>
-    </footer>
+    // <footer className="mt-auto pt-10 pb-4 text-center space-y-2">
+    //   <div className="flex items-center justify-center gap-2 text-xs text-gray-400 dark:text-gray-600">
+    //     <span>
+    //       &copy; {new Date().getFullYear()} {t('common.appName')} â€” oleh{' '}
+    //       <span className="text-green-600 dark:text-green-500 font-medium">@fauzanalfi</span>
+    //     </span>
+    //   </div>
+    //   <div className="flex items-center justify-center gap-3 text-xs text-gray-400 dark:text-gray-600">
+    //     <span className="flex items-center gap-1">
+    //       <Icon name="smart_toy" size={12} />
+    //       {t('sidebar.parser')} v{APP_VERSION}
+    //     </span>
+    //     <span>â€¢</span>
+    //     <span className="flex items-center gap-1">
+    //       <RefreshCw size={12} />
+    //       {t('sidebar.pullRefresh')}
+    //     </span>
+    //   </div>
+    // </footer>
   );
 };
 

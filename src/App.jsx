@@ -495,7 +495,7 @@ export default function App() {
           </div>
         )}
 
-        Restore panel: shown when Firestore is empty after loading
+        {/* Restore panel: shown when Firestore is empty after loading */}
         {/* {!IS_DEMO_MODE && !dataLoading && transactions.length === 0 && demoMigration === null && (
           <div className="mb-4 -mx-4 md:-mx-8 -mt-4 md:-mt-8 px-4 py-2.5 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-center gap-2 text-xs text-gray-500 dark:text-gray-400">
             <span>Punya data dari browser lain atau domain lama?</span>
