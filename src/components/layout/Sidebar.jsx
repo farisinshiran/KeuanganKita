@@ -26,19 +26,19 @@ const NAV_GROUPS = [
     ],
   },
   {
+    id: 'family',
+    labelKey: 'nav.group.family',
+    items: [
+      { id: 'kids', icon: 'family_restroom', labelKey: 'nav.family' },
+    ],
+  },
+  {
     id: 'tools',
     labelKey: 'nav.group.tools',
     items: [
       { id: 'zakat',        icon: 'volunteer_activism', labelKey: 'nav.zakat' },
       { id: 'salary-slips', icon: 'description',        labelKey: 'nav.salarySlips' },
       { id: 'categories',   icon: 'category',           labelKey: 'nav.categories' },
-    ],
-  },
-  {
-    id: 'family',
-    labelKey: 'nav.group.family',
-    items: [
-      { id: 'kids', icon: 'family_restroom', labelKey: 'nav.family' },
     ],
   },
 ];

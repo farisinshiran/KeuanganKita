@@ -1,4 +1,4 @@
-﻿import React, { useMemo } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import {
   ResponsiveContainer, Tooltip as ReTooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend,
@@ -7,8 +7,21 @@ import {
 import Icon from '../ui/Icon.jsx';
 import { COLORS } from '../../constants/currencies';
 import { calculateHealthScore, getScoreStatus } from '../../utils/healthScore';
+import { subscribeKids, calcAge, formatAge } from '../../services/kids';
 
-const DashboardView = ({ summary, transactions, investments, categories, investTypes, setActiveTab, fmt, privacyMode, darkMode }) => {
+const DashboardView = ({ summary, transactions, investments, categories, investTypes, setActiveTab, fmt, privacyMode, darkMode, dataOwnerId, appId }) => {
+  // ─── Kids (for Feature Anak mini-card) ────────────────────
+  const [kids, setKids] = useState([]);
+
+  useEffect(() => {
+    if (!dataOwnerId || !appId) {
+      setKids([]);
+      return;
+    }
+    const unsub = subscribeKids(dataOwnerId, appId, list => setKids(list));
+    return () => unsub && unsub();
+  }, [dataOwnerId, appId]);
+
 
   // â”€â”€ Data logic (preserved from v1) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -225,7 +238,46 @@ const DashboardView = ({ summary, transactions, investments, categories, investT
             </div>
           </div>
 
-          {/* Active Wallets mini-list */}
+      {/* Fitur Anak (Kids) */}
+      <div className="bg-gradient-to-br from-pink-50 to-emerald-50 dark:from-pink-900/10 dark:to-emerald-900/10 p-5 rounded-2xl border border-pink-100/70 dark:border-pink-800/30">
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="text-sm font-semibold text-on-surface flex items-center gap-2">
+            <Icon name="family_restroom" size={18} className="text-pink-500" /> Fitur Anak
+          </h3>
+          <button onClick={() => setActiveTab('kids')} className="text-xs text-primary hover:underline font-medium">Kelola →</button>
+        </div>
+        {kids.length === 0 ? (
+          <button onClick={() => setActiveTab('kids')} className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/70 dark:bg-gray-800/60 hover:bg-white dark:hover:bg-gray-800 hover:ring-1 hover:ring-pink-300 dark:hover:ring-pink-700 transition-all text-left">
+            <div className="w-10 h-10 rounded-full bg-pink-100 dark:bg-pink-900/30 text-pink-500 flex items-center justify-center shrink-0">
+              <Icon name="add" size={20} fill={1} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-on-surface">Tambah Profil Anak</p>
+              <p className="text-xs text-on-surface-variant">Pantau tumbuh kembang & milestone</p>
+            </div>
+          </button>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-xs text-on-surface-variant">{kids.length} profil tersimpan</p>
+            {kids.slice(0, 4).map(k => {
+              const age = calcAge(k.dob);
+              return (
+                <button key={k.id} onClick={() => setActiveTab('kids')} className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-white/70 dark:bg-gray-800/60 hover:bg-white dark:hover:bg-gray-800 hover:ring-1 hover:ring-pink-300 dark:hover:ring-pink-700 transition-all">
+                  <div className="text-2xl shrink-0">{k.gender === 'M' ? '👦' : '👧'}</div>
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-sm font-semibold text-on-surface truncate">{k.name}</p>
+                    <p className="text-xs text-on-surface-variant">{age ? `${age.years} thn ${age.months} bln` : formatAge(k.dob)}</p>
+                  </div>
+                  <Icon name="chevron_right" size={18} className="text-on-surface-variant shrink-0" />
+                </button>
+              );
+            })}
+            {kids.length > 4 && <p className="text-[11px] text-on-surface-variant text-center pt-1">+{kids.length - 4} lainnya</p>}
+          </div>
+        )}
+      </div>
+
+                        {/* Active Wallets mini-list */}
           <div className="bg-surface-container-low p-5 rounded-2xl">
             <div className="flex justify-between items-center mb-3">
               <h3 className="text-sm font-semibold text-on-surface flex items-center gap-2">
